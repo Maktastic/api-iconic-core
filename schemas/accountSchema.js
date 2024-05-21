@@ -12,7 +12,8 @@ const account = new mongoose.Schema({
     },
     mobile_number: {
         type: Number,
-        required: true
+        required: true,
+        unique: true
     },
     email: {
         type: String,
@@ -30,7 +31,7 @@ const account = new mongoose.Schema({
     },
 })
 
-account.pre('save', (next) => {
+account.pre('save', async function(next) {
     if (!this.isModified || !this.isModified('password')) {
         return next();
     }
@@ -45,6 +46,16 @@ account.pre('save', (next) => {
         next(error)
     })
 })
+
+account.methods.comparePasswords = async function(candidatePassword) {
+    try {
+        const ACCOUNT_SECRET_KEY = process.env.ACCOUNT_SECRET_KEY
+        candidatePassword = candidatePassword + ACCOUNT_SECRET_KEY
+        return await bcrypt.compare(candidatePassword, this.password);
+    } catch (error) {
+        throw new Error(error);
+    }
+};
 
 const Account = mongoose.model('Account', account)
 export default Account

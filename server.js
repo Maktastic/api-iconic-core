@@ -7,6 +7,9 @@ import helmet from "helmet";
 import bodyParser from "body-parser";
 import databaseConnect from "./utils/databaseConnect.js";
 import cookieParser from "cookie-parser";
+import redisSession from "./config/redis.js";
+import passport from "passport";
+import passportConfig from "./config/passport.js";
 
 
 const isDev = process.env.NODE_ENV !== 'production'
@@ -20,9 +23,15 @@ async function serverInit() {
     // Middlewares
     if(isDev) app.use(morgan('dev'))
     if(!isDev) app.use(helmet())
-    app.use(bodyParser.json())
-    app.use(cookieParser());
-    app.use(bodyParser.urlencoded({ extended: false}))
+    app.use(express.json())
+    app.use(express.urlencoded({ extended: true }));
+    app.use(redisSession);
+
+    // Passport middleware
+    passportConfig()
+    app.use(passport.initialize());
+    app.use(passport.session());
+    
     
     // Routes 
     try {
