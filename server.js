@@ -5,19 +5,38 @@ import routes from './routes/index.js'
 import morgan from 'morgan'
 import helmet from "helmet";
 import bodyParser from "body-parser";
+import databaseConnect from "./utils/databaseConnect.js";
+import cookieParser from "cookie-parser";
+
 
 const isDev = process.env.NODE_ENV !== 'production'
+const basePath = isDev ? 'dev' : 'prod'
 
-const app = express()
-// Middlewares
-if(isDev) app.use(morgan('dev'))
-app.use(helmet())
-app.use(bodyParser.json())
-app.use(bodyParser.urlencoded({ extended: false}))
 
-app.use('/api/', routes)
+async function serverInit() {
+    await databaseConnect()
+    const app = express()
 
-const PORT = process.env.PORT || 5000
-app.listen(PORT, () => {
-    console.log(`Server Started on PORT ${PORT}`)
-})
+    // Middlewares
+    if(isDev) app.use(morgan('dev'))
+    if(!isDev) app.use(helmet())
+    app.use(bodyParser.json())
+    app.use(cookieParser());
+    app.use(bodyParser.urlencoded({ extended: false}))
+    
+    // Routes 
+    try {
+        app.use(`/api/${basePath}`, routes)
+    } catch(e) {
+        console.error('Base Path is missing')
+        throw new Error('Base Path is missing')
+    }
+    
+    // Server Listener
+    const PORT = process.env.PORT || 5000
+    app.listen(PORT, () => {
+        console.log(`Server Started on PORT ${PORT}`)
+    })
+}
+
+serverInit()

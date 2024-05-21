@@ -1,8 +1,10 @@
 import express from "express";
+import accountController from "../controllers/accountController.js";
 const routes = express.Router()
 
-routes.get('/hello', (req, res) => {
-    res.status(200).send('hello world')
-})
+// Non-Authenticated Routes
+routes.post('/register', accountController.register)
+
+// Authenticated Routes
 
 export default routes
