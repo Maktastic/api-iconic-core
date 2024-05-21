@@ -1,10 +1,12 @@
 import mongoose from "mongoose";
 import dotenv from "dotenv";
+import Logbook from "../config/logger.js";
 dotenv.config()
 
 const MONGODBURI = process.env.NODE_ENV !== 'production' ? process.env.MONGODB_URI : null
 
 if(!MONGODBURI) {
+    Logbook.error('MONGODB URI IS MISSING')
     throw new Error('MONGODB URI IS MISSING')
 }
 
@@ -22,29 +24,29 @@ export const connectDatabase = async () => {
             };
 
             const connection = await mongoose.connect(MONGODBURI, options);
-            console.log(`MongoDB Connected: ${connection.connection.host}`);
+            Logbook.log(`MongoDB Connected: ${connection.connection.host}`)
 
             return connection;
         } catch (error) {
-            console.error('MongoDB Connection Error:', error.message);
+            Logbook.error('MongoDB Connection Error:', error.message)
             retries--;
-            console.log(`Retrying connection... (${retries} retries left)`);
+            Logbook.error(`Retrying connection... (${retries} retries left)`)
             // Wait for some time before retrying
             await new Promise(resolve => setTimeout(resolve, 5000)); // 5 seconds
         }
     }
     // If all retries fail, exit the process
-    console.error('Failed to connect to MongoDB after retries, exiting...');
+    Logbook.error('Failed to connect to MongoDB after retries, exiting...')
     process.exit(1);
 };
 
 mongoose.connection.on('disconnected', async () => {
-    console.log('Reconnecting')
+    Logbook.log('Reconnecting')
     await connectDatabase()
 })
 
 mongoose.connection.on('error', async(error) => {
-    console.log('MongoDB Connection Error: ', error)
+    Logbook.error('MongoDB Connection Error: ', error)
     return error
 })
 

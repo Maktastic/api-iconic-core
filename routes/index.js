@@ -9,6 +9,7 @@ import accountController from "../controllers/accountController.js";
 //Validations
 import validateLogin from "../validations/validateLogin.js";
 import validateRegister from "../validations/validateRegister.js";
+import passport from "passport";
 
 // Non-Authenticated Routes
 routes.post('/register', validateRegister, accountController.register)
@@ -16,7 +17,7 @@ routes.post('/login', validateLogin, accountController.login)
 
 // Authenticated Routes
 
-routes.get('/protected', passportConfig, (req, res) => {
+routes.get('/protected', passport.authenticate('jwt', { session: false }),(req, res) => {
     res.status(200).send({ message: "accessed a protected route" })
 })
 

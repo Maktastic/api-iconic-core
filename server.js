@@ -4,17 +4,14 @@ import express from 'express'
 import routes from './routes/index.js'
 import morgan from 'morgan'
 import helmet from "helmet";
-import bodyParser from "body-parser";
 import databaseConnect from "./utils/databaseConnect.js";
-import cookieParser from "cookie-parser";
 import redisSession from "./config/redis.js";
 import passport from "passport";
 import passportConfig from "./config/passport.js";
-
+import Logbook from "./config/logger.js";
 
 const isDev = process.env.NODE_ENV !== 'production'
 const basePath = isDev ? 'dev' : 'prod'
-
 
 async function serverInit() {
     await databaseConnect()
@@ -29,15 +26,13 @@ async function serverInit() {
 
     // Passport middleware
     passportConfig()
-    app.use(passport.initialize());
     app.use(passport.session());
-    
     
     // Routes 
     try {
         app.use(`/api/${basePath}`, routes)
     } catch(e) {
-        console.error('Base Path is missing')
+        Logbook.error('Base Path is missing')
         throw new Error('Base Path is missing')
     }
     

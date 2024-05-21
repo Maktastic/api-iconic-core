@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import bcrypt from "bcrypt";
+import Logbook from "../config/logger.js";
 
 const account = new mongoose.Schema({
     name: {
@@ -43,6 +44,7 @@ account.pre('save', async function(next) {
         next()
         resolve(true)
     }).catch((error) => {
+        Logbook.error(error)
         next(error)
     })
 })
@@ -53,6 +55,7 @@ account.methods.comparePasswords = async function(candidatePassword) {
         candidatePassword = candidatePassword + ACCOUNT_SECRET_KEY
         return await bcrypt.compare(candidatePassword, this.password);
     } catch (error) {
+        Logbook.error(error)
         throw new Error(error);
     }
 };

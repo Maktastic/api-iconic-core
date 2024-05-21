@@ -3,6 +3,7 @@ import { Strategy as JwtStrategy, ExtractJwt } from 'passport-jwt';
 import dotenv from 'dotenv';
 
 import Account from '../schemas/accountSchema.js'
+import Logbook from "./logger.js";
 
 dotenv.config();
 
@@ -11,21 +12,24 @@ const opts = {
     secretOrKey: process.env.ACCOUNT_SECRET_KEY,
 };
 
-const passportConfig = () => {
-    passport.use(
-        new JwtStrategy(opts, async (payload, done) => {
-            try {
-                const user = await Account.findById(payload._id);
-                console.log(user)
-                if (user) {
-                    return done(null, user);
-                }
+passport.use(
+    new JwtStrategy(opts, async (payload, done) => {
+        try {
+            const user = await Account.findById(payload._id);
+            if (user) {
+                return done(null, user);
+            } else {
                 return done(null, false);
-            } catch (err) {
-                return done(err, false);
             }
-        })
-    );
-}
+        } catch (err) {
+            Logbook.error(`Error in JWT strategy: ${err.message}`);
+            return done(err, false);
+        }
+    })
+);
+
+const passportConfig = () => {
+    passport.initialize();
+};
 
 export default passportConfig;

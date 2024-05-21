@@ -11,6 +11,7 @@ const redisClient = redis.createClient({
 
 redisClient.on('error', (error) => {
     console.log('Redis error: ', error);
+    throw new Error('Redis Client Error')
 })
 
 const redisSession = session({

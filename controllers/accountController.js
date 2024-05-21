@@ -1,6 +1,7 @@
 import Account from "../schemas/accountSchema.js";
 import _ from 'lodash'
 import {generateRefreshToken, generateToken} from "../utils/tokenGeneration.js";
+import Logbook from "../config/logger.js";
 
 const accountController = {
     
@@ -40,7 +41,7 @@ const accountController = {
                 }
 
             }).catch((error) => {
-                console.log(error)
+                Logbook.error(error)
                 res.status(400).send({ message: 'Error Creating User Account', error: error?.errorResponse })
             })
             
@@ -58,7 +59,7 @@ const accountController = {
             
             const user = await Account.findOne({ email })
             if(!user) {
-                res.status(400).send({ message: "Authentication Failed, User Not Found" })
+                return res.status(400).send({ message: "Authentication Failed, User Not Found" })
             }
             
             await user.comparePasswords(password)
@@ -75,16 +76,17 @@ const accountController = {
                         let userData = { name: user?.name, surname: user?.surname, mobile_number: user?.mobile_number, email: user?.email, _id: user?._id}
                         res.status(200).send({ message: "Log In Successful", status: 200, token: accessToken, userAccount: userData })
                     } else {
+                        Logbook.error({ error: 'Email/Password is Incorrect', status: 400 })
                         res.status(400).send({ error: 'Email/Password is Incorrect', status: 400 })
                     }
                 })
                 .catch((error) => {
-                    console.log(error)
+                    Logbook.error(error)
                     res.status(500).send('Internal Server Error')
                 })
             
         }).catch((error) => {
-            console.log(error)
+            Logbook.error(error)
             res.status(500).send('Server Error')
         })
     }
