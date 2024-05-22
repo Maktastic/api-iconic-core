@@ -17,7 +17,7 @@ RUN npm rebuild bcrypt --build-from-source
 COPY . .
 
 # Expose the application port (adjust if necessary)
-EXPOSE 5000
+EXPOSE 5000 27017
 
 # Start the application (adjust if necessary)
 CMD ["npm", "start"]

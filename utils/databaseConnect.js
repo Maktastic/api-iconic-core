@@ -10,21 +10,20 @@ if(!MONGODBURI) {
     throw new Error('MONGODB URI IS MISSING')
 }
 
+
+
 // Connect to MongoDB
 export const connectDatabase = async () => {
     let retries = 5; // Number of connection retries
+    console.log(MONGODBURI)
     while (retries) {
         try {
             const options = {
-                dbName: process.env.NODE_ENV !== 'development' ? process.env.MONGODB_PROD_DBNAME : process.env.MONGODB_DEV_DBNAME,
-                bufferCommands: false,
-                maxIdleTimeMS: 10000,
-                serverSelectionTimeoutMS: 10000,
-                socketTimeoutMS: 20000
+                dbName: process.env.NODE_ENV !== 'development' ? process.env.MONGODB_PROD_DBNAME : process.env.MONGODB_DEV_DBNAME
             };
 
             const connection = await mongoose.connect(MONGODBURI, options);
-            Logbook.log(`MongoDB Connected: ${connection.connection.host}`)
+            Logbook.error(`MongoDB Connected: ${connection.connection.host}`)
 
             return connection;
         } catch (error) {
@@ -41,7 +40,7 @@ export const connectDatabase = async () => {
 };
 
 mongoose.connection.on('disconnected', async () => {
-    Logbook.log('Reconnecting')
+    Logbook.error('Reconnecting')
     await connectDatabase()
 })
 

@@ -1,9 +1,17 @@
 # docker-compose.yml
-version: '3.8'
-
 services:
+  mongodb:
+    image: mongodb/mongodb-community-server:latest
+    restart: always
+    ports:
+      - '27017:27017'
+    environment:
+      MONGO_INITDB_DATABASE: iconic-core-db
+    container_name: mongodb
+    
   app:
     build: .
+    restart: always
     env_file:
       - .env
     ports:
@@ -13,11 +21,4 @@ services:
     volumes:
       - .:/app
       - /app/node_modules
-
-  mongodb:
-    image: mongo:latest
-    restart: always
-    ports:
-      - '27017:27017'
-    environment:
-      MONGO_INITDB_DATABASE: iconic-core-db
+    container_name: app
