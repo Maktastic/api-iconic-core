@@ -17,6 +17,15 @@ routes.post('/login', validateLogin, accountController.login)
 
 // Authenticated Routes
 
+// Google Authentication
+routes.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] } ));
+
+routes.get('/google/callback', passport.authenticate('google'),
+    function(req, res) {
+        // Successful authentication, redirect home.
+        res.redirect('/api/dev/google/success');
+    });
+
 routes.get('/protected', passport.authenticate('jwt', { session: false }),(req, res) => {
     res.status(200).send({ message: "accessed a protected route" })
 })

@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 
 import Account from '../schemas/accountSchema.js'
 import Logbook from "./logger.js";
+import './passport-google.js'
 
 dotenv.config();
 
@@ -27,6 +28,7 @@ passport.use(
         }
     })
 );
+
 
 passport.serializeUser((user, done) => {
     done(null, user._id)
