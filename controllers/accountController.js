@@ -5,6 +5,10 @@ import Logbook from "../config/logger.js";
 
 const accountController = {
     
+    getUser: async (req, res) => {
+        
+    },
+    
     register: async (req, res) => {
         return new Promise(async (resolve, reject) => {
             
@@ -92,12 +96,24 @@ const accountController = {
     },
 
     googleSuccess: async (req, res) => {
-        res.status(200).send({ 'message': 'Successfully logged in'});
-    },
+        
+        if(req.isAuthenticated()) {
+            const user = req.user
+            let payload = { _id: user._id.toString() }
+            const accessToken = await generateToken(payload)
+            const refreshToken = await generateRefreshToken(payload)
 
-    googleFailure: async (req, res) => {
-        res.status(200).send({ 'message': 'Failure logged in'});
-    }
+            res.cookie('refreshToken', refreshToken, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production', // Set to true in production
+                maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days expiration
+            });
+
+            res.redirect(`${process.env.BASE_PATH}/dashboard?login=success&status=200&token=${accessToken}`)
+        } else {
+            res.redirect('/login?google-auth-failure&status=400')
+        }
+    },
 }
 
 export default accountController

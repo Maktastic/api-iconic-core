@@ -24,6 +24,14 @@ const account = new mongoose.Schema({
     googleID: {
         type: String
     },
+    twoFactorAuth: {
+      type: Boolean,
+      default: false  
+    },
+    isEmailVerified: {
+        type: Boolean,
+        default: false
+    },
     createdAt: {
         type: Date,
         default: Date.now

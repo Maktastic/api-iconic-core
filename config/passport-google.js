@@ -23,12 +23,14 @@ passport.use(new GoogleStrategy({
             const newAccount = await Account.create({
                 name: profile.displayName,
                 surname: profile.name.familyName,
+                mobile_number: null,
                 email: profile.emails[0].value,
+                password: null,
                 googleID: profile.id
             });
 
             console.log('New User Account created');
-            return cb(null, newAccount);
+            return cb(null, newAccount, { message: 'Account Created Successfully!' });
         } catch (error) {
             console.error('Error processing Google authentication:', error);
             return cb(error, { message: 'Error processing Google authentication' }); // Pass any errors to the cb callback
