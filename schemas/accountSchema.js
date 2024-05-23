@@ -6,12 +6,19 @@ const account = new mongoose.Schema({
     name: {
         type: String,
     },
+    role: {
+        type: String,
+        default: 'customer'
+    },
+    roleID: {
+        type: Number,
+        default: 1
+    },
     surname: {
         type: String,
     },
     mobile_number: {
-        type: Number,
-        nullable: true
+        type: Number
     },
     email: {
         type: String,
