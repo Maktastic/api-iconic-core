@@ -89,6 +89,14 @@ const accountController = {
             Logbook.error(error)
             res.status(500).send('Server Error')
         })
+    },
+
+    googleSuccess: async (req, res) => {
+        res.status(200).send({ 'message': 'Successfully logged in'});
+    },
+
+    googleFailure: async (req, res) => {
+        res.status(200).send({ 'message': 'Failure logged in'});
     }
 }
 

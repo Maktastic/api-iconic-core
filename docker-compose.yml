@@ -18,7 +18,14 @@ services:
       - '5000:5000'
     depends_on:
       - mongodb
+      - redis
     volumes:
       - .:/app
       - /app/node_modules
     container_name: app
+
+  redis:
+    image: redis:latest
+    container_name: redis
+    ports:
+      - "6379:6379"

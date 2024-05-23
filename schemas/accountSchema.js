@@ -11,7 +11,7 @@ const account = new mongoose.Schema({
     },
     mobile_number: {
         type: Number,
-        unique: true
+        nullable: true
     },
     email: {
         type: String,

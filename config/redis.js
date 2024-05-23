@@ -1,18 +1,24 @@
 import dotenv from 'dotenv'
 dotenv.config()
-import RedisStore from "connect-redis";
 import redis from 'redis'
 import session from 'express-session'
+import RedisStore from "connect-redis";
+
 
 const redisClient = redis.createClient({
-    host: 'localhost',
-    port: 6379
+    url: process.env.REDIS_URL,
 })
+
+redisClient.on('connect', () => {
+    console.log('Connected to Redis');
+});
 
 redisClient.on('error', (error) => {
     console.log('Redis error: ', error);
     throw new Error('Redis Client Error')
 })
+
+await redisClient.connect();
 
 const redisSession = session({
     store: new RedisStore({ client: redisClient }),

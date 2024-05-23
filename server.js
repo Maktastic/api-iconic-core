@@ -27,6 +27,7 @@ async function serverInit() {
     // Passport middleware
     passportConfig()
     app.use(passport.session());
+
     
     // Routes 
     try {

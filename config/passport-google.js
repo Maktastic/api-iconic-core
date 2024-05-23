@@ -16,7 +16,7 @@ passport.use(new GoogleStrategy({
 
             if (account) {
                 console.log('User Account already exists');
-                return cb(null, account);
+                return cb(null, account, { message: 'Log In Successfully' });
             }
 
             // Create a new user account if it doesn't exist
@@ -24,8 +24,6 @@ passport.use(new GoogleStrategy({
                 name: profile.displayName,
                 surname: profile.name.familyName,
                 email: profile.emails[0].value,
-                password: null,
-                mobile_number: null,
                 googleID: profile.id
             });
 
@@ -33,6 +31,23 @@ passport.use(new GoogleStrategy({
             return cb(null, newAccount);
         } catch (error) {
             console.error('Error processing Google authentication:', error);
-            return cb(error); // Pass any errors to the cb callback
+            return cb(error, { message: 'Error processing Google authentication' }); // Pass any errors to the cb callback
         }
     }));
+
+passport.serializeUser((user, done) => {
+    process.nextTick(() => {
+        done(null, user.id);
+    })
+});
+
+passport.deserializeUser(async (id, done) => {
+    process.nextTick(async () => {
+        try {
+            const user = await Account.findOne({ googleID: id });
+            done(null, user);
+        } catch (err) {
+            done(err, null);
+        }
+    })
+});

@@ -2,6 +2,8 @@ import express from "express";
 import passportConfig from "../config/passport.js";
 
 const routes = express.Router()
+const isDev = process.env.NODE_ENV !== 'production'
+const basePath = isDev ? 'dev' : 'prod'
 
 // Controllers
 import accountController from "../controllers/accountController.js";
@@ -20,11 +22,8 @@ routes.post('/login', validateLogin, accountController.login)
 // Google Authentication
 routes.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] } ));
 
-routes.get('/google/callback', passport.authenticate('google'),
-    function(req, res) {
-        // Successful authentication, redirect home.
-        res.redirect('/api/dev/google/success');
-    });
+routes.get('/google/callback', passport.authenticate('google'), accountController.googleSuccess);
+
 
 routes.get('/protected', passport.authenticate('jwt', { session: false }),(req, res) => {
     res.status(200).send({ message: "accessed a protected route" })
