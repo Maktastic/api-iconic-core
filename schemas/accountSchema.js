@@ -32,6 +32,14 @@ const account = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    BTC_Wallet_Address: {
+      type: String,
+      default: ''  
+    },
+    todoList: {
+      type: Array,
+      default: []  
+    },
     createdAt: {
         type: Date,
         default: Date.now
