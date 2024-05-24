@@ -18,7 +18,8 @@ const account = new mongoose.Schema({
         type: String,
     },
     mobile_number: {
-        type: Number
+        type: Number,
+        sparse: true
     },
     email: {
         type: String,
@@ -39,9 +40,14 @@ const account = new mongoose.Schema({
         type: Boolean,
         default: false
     },
-    BTC_Wallet_Address: {
+    BTC_wallet_address: {
       type: String,
       default: ''  
+    },
+    last_e_bill: {
+       type: Number,
+       default: 0,
+       sparse: true
     },
     todoList: {
       type: Array,
@@ -51,6 +57,20 @@ const account = new mongoose.Schema({
         type: Date,
         default: Date.now
     },
+    current_status: {
+        type: String,
+        sparse: true,
+        default: 'Online'
+    },
+    contracts_started: {
+        type: Number,
+        default: 0
+    },
+    payment_history: {
+        type: Number,
+        sparse: true,
+        default: 0
+    }
 })
 
 account.pre('save', async function(next) {

@@ -77,6 +77,11 @@ const accountController = {
                             secure: process.env.NODE_ENV === 'production', // Set to true in production
                             maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days expiration
                         });
+                        res.cookie('accessToken', refreshToken, {
+                            httpOnly: true,
+                            secure: process.env.NODE_ENV === 'production', // Set to true in production
+                            maxAge: 24 * 60 * 60 * 1000 // 7 days expiration
+                        });
                         let userData = { name: user?.name, surname: user?.surname, mobile_number: user?.mobile_number, email: user?.email, _id: user?._id}
                         res.status(200).send({ message: "Log In Successful", status: 200, token: accessToken, userAccount: userData })
                     } else {
@@ -107,6 +112,12 @@ const accountController = {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production', // Set to true in production
                 maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days expiration
+            });
+
+            res.cookie('accessToken', refreshToken, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production', // Set to true in production
+                maxAge: 24 * 60 * 60 * 1000 // 7 days expiration
             });
 
             res.redirect(`${process.env.BASE_PATH}/dashboard?login=success&status=200&token=${accessToken}`)
