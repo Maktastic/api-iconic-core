@@ -92,7 +92,7 @@ const todoListController = {
             const userID = user._id.toString()
             
             const validateUpdatedList = new mongoose.model('TodoList', todoSchema)(updatedList).validateSync()
-            if(validateUpdatedList) {
+            if(validateUpdatedList?.errors) {
                 return res.status(400).send({ error: validateUpdatedList.errors, status: 400 })
             }
             

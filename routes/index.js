@@ -27,11 +27,11 @@ routes.post('/login', validateLogin, accountController.login)
 routes.post('/calculate', passport.authenticate('jwt',  { session: false }), validateCalculation, calculateController.calculate)
 
 // ---------------- Secure Google Authentication ---------------
-routes.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] } ));
+// routes.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] } ));
 
-routes.get('/google/callback', passport.authenticate('google', 
-    { failureRedirect: `${process.env.BASE_PATH}/login?google-auth-failure&status=400` }), 
-    accountController.googleSuccess);
+// routes.get('/google/callback', passport.authenticate('google', 
+//     { failureRedirect: `${process.env.BASE_PATH}/login?google-auth-failure&status=400` }), 
+//     accountController.googleSuccess);
 // ---------------- Secure Google Authentication ---------------
 
 // CRUD TODO list [[[[[[[][[][[{ INSERT<, UPDATE, DELETE, GET }
