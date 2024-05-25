@@ -2,6 +2,8 @@ import Account from "../schemas/accountSchema.js";
 import _ from 'lodash'
 import {generateRefreshToken, generateToken} from "../utils/tokenGeneration.js";
 import Logbook from "../config/logger.js";
+import mongoose from "mongoose";
+import connectDatabase from "../utils/databaseConnect.js";
 
 const accountController = {
     
@@ -125,6 +127,8 @@ const accountController = {
             res.redirect('/login?google-auth-failure&status=400')
         }
     },
+
+    
 }
 
 export default accountController

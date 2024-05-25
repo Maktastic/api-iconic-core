@@ -1,8 +1,14 @@
 import mongoose from "mongoose";
 import bcrypt from "bcrypt";
 import Logbook from "../config/logger.js";
+import todoSchema from "./todoSchema.js";
 
 const account = new mongoose.Schema({
+    customerID: {
+      type: String,
+      unique: true,
+      default: () => 'C' + Math.floor(Math.random() * 1000000).toString().padStart(6, '0')
+    },
     name: {
         type: String,
     },
@@ -50,7 +56,7 @@ const account = new mongoose.Schema({
        sparse: true
     },
     todoList: {
-      type: Array,
+      type: [todoSchema],
       default: []  
     },
     createdAt: {
