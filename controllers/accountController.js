@@ -42,7 +42,8 @@ const accountController = {
                         secure: process.env.NODE_ENV === 'production', // Set to true in production
                         maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days expiration
                     });
-                    let userData = { name: result?.name, surname: result?.surname, mobile_number: result?.mobile_number, email: result?.email, _id: result?._id}
+                    let userData = result
+                    userData.password = null
                     res.status(200).json({ userAccount: userData, token: accessToken, message: 'Account Created Successfully', status: 200 });
                 }
 
@@ -84,7 +85,8 @@ const accountController = {
                             secure: process.env.NODE_ENV === 'production', // Set to true in production
                             maxAge: 24 * 60 * 60 * 1000 // 7 days expiration
                         });
-                        let userData = { name: user?.name, surname: user?.surname, mobile_number: user?.mobile_number, email: user?.email, _id: user?._id}
+                        let userData = user
+                        userData.password = null
                         res.status(200).send({ message: "Log In Successful", status: 200, token: accessToken, userAccount: userData })
                     } else {
                         Logbook.error({ error: 'Email/Password is Incorrect', status: 400 })

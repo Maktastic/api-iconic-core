@@ -9,13 +9,10 @@ import redisSession from "./config/redis.js";
 import passport from "passport";
 import passportConfig from "./config/passport.js";
 import Logbook from "./config/logger.js";
-import { createServer } from "http";
-import createBitcoinWebsocket from "./websockets/bitcoin_socket.js";
 import cors from 'cors';
-import * as http from "node:http";
-import {Server} from "socket.io";
 import * as path from "node:path";
 import { fileURLToPath } from 'url'
+import createBitcoinSocket from "./config/socket.js";
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -33,7 +30,7 @@ async function serverInit() {
     if(!isDev) app.use(helmet())
     app.use(express.json())
     app.use(express.urlencoded({ extended: true }));
-    // app.use(cors()); // Use the CORS middleware
+    app.use(cors()); // Use the CORS middleware
     app.use(redisSession);
 
     // Passport middleware
@@ -50,9 +47,11 @@ async function serverInit() {
 
     // Server Listener
     const PORT = process.env.PORT || 5000
-    app.listen(PORT, () => {
+    const server = app.listen(PORT, () => {
         console.log(`Server Started on PORT ${PORT}`)
     })
+    
+    createBitcoinSocket(server)
 }
 
 serverInit()
