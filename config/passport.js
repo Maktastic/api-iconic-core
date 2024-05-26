@@ -32,13 +32,13 @@ passport.use(
 
 passport.serializeUser((user, done) => {
     process.nextTick(() => {
-        done(null, user._id)
+        done(null, user)
     })
 })
 
 passport.deserializeUser((user, done) => {
     process.nextTick(() => {
-        done(null, user._id)
+        done(null, user)
     })
 })
 

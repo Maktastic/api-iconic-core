@@ -23,7 +23,7 @@ export const connectDatabase = async () => {
             };
 
             const connection = await mongoose.connect(MONGODBURI, options);
-            Logbook.error(`MongoDB Connected: ${connection.connection.host}`)
+            Logbook.info(`MongoDB Connected: ${connection.connection.host}`)
 
             return connection;
         } catch (error) {

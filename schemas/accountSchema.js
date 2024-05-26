@@ -65,7 +65,6 @@ const account = new mongoose.Schema({
     },
     current_status: {
         type: String,
-        sparse: true,
         default: 'Online'
     },
     contracts_started: {
@@ -74,8 +73,10 @@ const account = new mongoose.Schema({
     },
     payment_history: {
         type: Number,
-        sparse: true,
         default: 0
+    },
+    tempToken: {
+        type: String
     }
 })
 
@@ -103,7 +104,7 @@ account.methods.comparePasswords = async function(candidatePassword) {
         return await bcrypt.compare(candidatePassword, this.password);
     } catch (error) {
         Logbook.error(error)
-        throw new Error(error);
+        return error
     }
 };
 

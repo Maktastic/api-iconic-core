@@ -9,6 +9,9 @@ async function getBitcoinPrice() {
     const response = await axios.get('https://api.coindesk.com/v1/bpi/currentprice/BTC.json');
     if(response) {
         return parseFloat(response.data?.bpi?.USD?.rate_float).toFixed(2) 
+    } else {
+        Logbook.error('Failed to fetch data')
+        return 0
     }
 }
 
@@ -39,7 +42,7 @@ export default function createBitcoinSocket(server) {
     
     io.use(passportAuthetication).on('connection', async socket => {
 
-        console.log(`Connected User: ${socket.id}`);
+        Logbook.info(`Connected User: ${socket.id}`);
         
         const bitcoinPriceUpdate =  async () => {
             try {
@@ -48,7 +51,7 @@ export default function createBitcoinSocket(server) {
                     socket.emit('bitcoinPriceUpdate', response)
                 }
             } catch (e) {
-                console.error('Error fetching Bitcoin price:', e);
+                Logbook.error('Error fetching Bitcoin price:', e);
                 return null;
             }
         }
@@ -58,7 +61,7 @@ export default function createBitcoinSocket(server) {
 
         // Clear interval on disconnect
         socket.on('disconnect', () => {
-            console.log('user disconnected');
+            Logbook.error('user disconnected');
             clearInterval(intervalId);
         });
     })

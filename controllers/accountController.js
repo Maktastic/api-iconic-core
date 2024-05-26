@@ -1,9 +1,8 @@
 import Account from "../schemas/accountSchema.js";
 import _ from 'lodash'
-import {generateRefreshToken, generateToken} from "../utils/tokenGeneration.js";
+import {generateRefreshToken, generateTemporaryToken, generateToken} from "../utils/tokenGeneration.js";
 import Logbook from "../config/logger.js";
-import mongoose from "mongoose";
-import connectDatabase from "../utils/databaseConnect.js";
+import sendVerificationEmail from "../config/mailer.js";
 
 const accountController = {
     
@@ -34,27 +33,61 @@ const accountController = {
                 name, surname, mobile_number, email, password
             }).then(async (result) => {
                 if(result && _.size(result) !== 0) {   
-                    let payload = { _id: result._id.toString() }
-                    const accessToken = await generateToken(payload)
-                    const refreshToken = await generateRefreshToken(payload)
-                    res.cookie('refreshToken', refreshToken, {
-                        httpOnly: true,
-                        secure: process.env.NODE_ENV === 'production', // Set to true in production
-                        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days expiration
-                    });
-                    let userData = result
-                    userData.password = null
-                    res.status(200).json({ userAccount: userData, token: accessToken, message: 'Account Created Successfully', status: 200 });
+                    
+                    if(!result?.isEmailVerified) {
+                        const _id = result?._id
+                        const temporaryToken = await generateTemporaryToken(_id)
+                        await Account.findOne({ _id: _id })
+                            .then(async (tempUser) => {
+                                tempUser.tempToken = temporaryToken
+                                await tempUser.save()
+                            })
+                            .then(async () => {
+                                Logbook.info(`verify email to login: ${ _id }`)
+                                const sendEmail = await sendVerificationEmail(result?.email, _id, temporaryToken)
+                                if(sendEmail && sendEmail.response) {
+                                    return res.status(200).send({
+                                        message: 'Account created successfully. Verify email address to login',
+                                        login: result?.isEmailVerified,
+                                        status: 200
+                                    })
+                                } else {
+                                    return res.status(400).send({
+                                        message: 'Email was not successful, please try again later',
+                                        status: 400
+                                    })
+                                }
+                                
+                            }).catch((error) => {
+                                Logbook.error(error)
+                                res.status(400).send({ error: error, status: 400 })
+                                reject(error)
+                            })
+                        
+                    } else {
+                        let payload = { _id: result?._id.toString() }
+                        const accessToken = await generateToken(payload)
+                        const refreshToken = await generateRefreshToken(payload)
+                        res.cookie('refreshToken', refreshToken, {
+                            httpOnly: true,
+                            secure: process.env.NODE_ENV === 'production', // Set to true in production
+                            maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days expiration
+                        });
+                        let userData = result
+                        _.omit(userData, password)
+                        res.status(200).json({ userAccount: userData, token: accessToken, message: 'Account Created Successfully', status: 200 });
+                        Logbook.info('Account Created Successfully')
+                    }
                 }
 
             }).catch((error) => {
                 Logbook.error(error)
-                res.status(400).send({ message: 'Error Creating User Account', error: error?.errorResponse })
+                res.status(400).send({ message: 'Error Creating User Account', error: error?.errorResponse, status: 400 })
             })
             
             
         }).catch((error) => {
-            console.error(error)
+            Logbook.error(error)
             res.status(500).send('Server Error')
         })
     },
@@ -66,41 +99,53 @@ const accountController = {
             
             const user = await Account.findOne({ email })
             if(!user) {
-                return res.status(400).send({ message: "Authentication Failed, User Not Found" })
+                return res.status(400).send({ error: "Authentication Failed, User Not Found", status: 400 })
             }
             
             await user.comparePasswords(password)
                 .then(async (result) => {
                     if(result) {
                         let payload = { _id: user._id.toString() }
-                        const accessToken = await generateToken(payload)
-                        const refreshToken = await generateRefreshToken(payload)
-                        res.cookie('refreshToken', refreshToken, {
-                            httpOnly: true,
-                            secure: process.env.NODE_ENV === 'production', // Set to true in production
-                            maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days expiration
-                        });
-                        res.cookie('accessToken', refreshToken, {
-                            httpOnly: true,
-                            secure: process.env.NODE_ENV === 'production', // Set to true in production
-                            maxAge: 24 * 60 * 60 * 1000 // 7 days expiration
-                        });
-                        let userData = user
-                        userData.password = null
-                        res.status(200).send({ message: "Log In Successful", status: 200, token: accessToken, userAccount: userData })
+                        
+                        if(!user?.isEmailVerified) {
+                            Logbook.error('verify email to access dashboard: ', user._id)
+                            return res.status(200).send({ error: 'Verify email address to access dashboard!', emailVerify: user.isEmailVerified })
+                            resolve()
+                        } else {
+                            
+                            const accessToken = await generateToken(payload)
+                            const refreshToken = await generateRefreshToken(payload)
+                            res.cookie('refreshToken', refreshToken, {
+                                httpOnly: true,
+                                secure: process.env.NODE_ENV === 'production', // Set to true in production
+                                maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days expiration
+                            });
+                            res.cookie('accessToken', refreshToken, {
+                                httpOnly: true,
+                                secure: process.env.NODE_ENV === 'production', // Set to true in production
+                                maxAge: 24 * 60 * 60 * 1000 // 7 days expiration
+                            });
+                            let userData = user
+                            userData = _.omit(userData, password)
+                            res.status(200).send({ message: "Log In Successful", status: 200, token: accessToken, userAccount: userData })
+                            resolve()
+                        }
                     } else {
                         Logbook.error({ error: 'Email/Password is Incorrect', status: 400 })
                         res.status(400).send({ error: 'Email/Password is Incorrect', status: 400 })
+                        reject('Email/Password is Incorrect')
                     }
                 })
                 .catch((error) => {
                     Logbook.error(error)
-                    res.status(500).send('Internal Server Error')
+                    res.status(400).send({ error: 'Email/Password is Incorrect', status: 400 })
+                    reject(error)
                 })
             
         }).catch((error) => {
             Logbook.error(error)
-            res.status(500).send('Server Error')
+            res.status(500).send('Internal Server Error')
+            reject(error)
         })
     },
 
@@ -112,23 +157,90 @@ const accountController = {
             const accessToken = await generateToken(payload)
             const refreshToken = await generateRefreshToken(payload)
 
-            res.cookie('refreshToken', refreshToken, {
+            res.cookie('accessToken', refreshToken, {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production', // Set to true in production
                 maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days expiration
             });
 
-            res.cookie('accessToken', refreshToken, {
+            res.cookie('refreshToken', refreshToken, {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production', // Set to true in production
                 maxAge: 24 * 60 * 60 * 1000 // 7 days expiration
             });
+            
+            await Account.findById(user._id)
+                .then(async (userDoc) => {
+                    if(!userDoc) {
+                        Logbook.error(`User Not Found: ${user._id}`)
+                        return res.redirect(`${process.env.BASE_PATH}/login`)
+                    }
+                    userDoc.isEmailVerified = true
+                    await userDoc.save()
+                })
+                .then(() => {
+                    Logbook.log('200: Google Authentication Success')
+                    res.redirect(`${process.env.BASE_PATH}/dashboard?login=success&status=200&token=${accessToken}`)
+                })
+                .catch((error) => {
+                    Logbook.error(`400: Google Authentication Failure: ${error}`)
+                    res.redirect('/login?google-auth-failure&status=400')
+                })
 
-            res.redirect(`${process.env.BASE_PATH}/dashboard?login=success&status=200&token=${accessToken}`)
         } else {
+            Logbook.error('400: Google Authentication Failure')
             res.redirect('/login?google-auth-failure&status=400')
         }
     },
+
+    validateEmail: async (req, res) => {
+        
+        const { tempToken } = req.user
+        const user_id = req.user._id.toString()
+        
+        if(!tempToken) {
+            return res.status(400).send({ error: 'User not found', status: 400 })
+        }
+        
+        await Account.findOne({ tempToken: tempToken })
+            .then(async (result) => {
+                if(result && _.size(result) !== 0) {
+                    result.tempToken = null
+                    result.isEmailVerified = true
+                    await result.save()
+                } else {
+                    res.status(400).send({ error: 'User not found', status: 400 })
+                }
+            })
+            .then(async () => {
+                let payload = { _id: user_id }
+                const accessToken = await generateToken(payload)
+                const refreshToken = await generateRefreshToken(payload)
+
+                res.cookie('accessToken', accessToken, {
+                    httpOnly: true,
+                    secure: process.env.NODE_ENV === 'production', // Set to true in production
+                    maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days expiration
+                });
+
+                res.cookie('refreshToken', refreshToken, {
+                    httpOnly: true,
+                    secure: process.env.NODE_ENV === 'production', // Set to true in production
+                    maxAge: 24 * 60 * 60 * 1000 // 7 days expiration
+                });
+                Logbook.info(`200: Account ${user_id} verification success`)
+                res.status(200).send({ 
+                    message: `Account: ${user_id} verification successful`, 
+                    redirectionURL: `${process.env.BASE_PATH}/dashboard?login=success&status=200&token=${accessToken}`,
+                    status: 200
+                })
+            })
+            .catch((error) => {
+                Logbook.error(error)
+                res.status(400).send({ error: error, status: 400 })
+            })
+        
+    }
 
     
 }

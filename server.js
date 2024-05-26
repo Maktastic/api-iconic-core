@@ -13,6 +13,7 @@ import cors from 'cors';
 import * as path from "node:path";
 import { fileURLToPath } from 'url'
 import createBitcoinSocket from "./config/socket.js";
+import compression from "compression";
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -25,6 +26,7 @@ async function serverInit() {
     const app = express()
 
     // Middlewares
+    app.use(compression())
     app.use(express.static(path.join(__dirname, "public")))
     if(isDev) app.use(morgan('dev'))
     if(!isDev) app.use(helmet())
@@ -48,7 +50,7 @@ async function serverInit() {
     // Server Listener
     const PORT = process.env.PORT || 5000
     const server = app.listen(PORT, () => {
-        console.log(`Server Started on PORT ${PORT}`)
+        Logbook.info(`Server Started on PORT ${PORT}`)
     })
     
     createBitcoinSocket(server)
