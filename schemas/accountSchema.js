@@ -16,16 +16,15 @@ const account = new mongoose.Schema({
         type: String,
         default: 'customer'
     },
-    roleID: {
-        type: Number,
-        default: 1
+    isAdmin: {
+      type: Boolean,
+      default: false  
     },
     surname: {
         type: String,
     },
     mobile_number: {
-        type: Number,
-        sparse: true
+        type: Number
     },
     email: {
         type: String,
@@ -52,8 +51,7 @@ const account = new mongoose.Schema({
     },
     last_e_bill: {
        type: Number,
-       default: 0,
-       sparse: true
+       default: 0
     },
     todoList: {
       type: [todoSchema],
@@ -77,8 +75,17 @@ const account = new mongoose.Schema({
     },
     tempToken: {
         type: String
+    },
+    resetCode: {
+        type: Number
+    },
+    resetExpiry: {
+        type: Number
     }
 })
+
+// Create Indexes
+account.index({ email: 1 }, { unique: true, sparse: true });
 
 account.pre('save', async function(next) {
     if (!this.isModified || !this.isModified('password')) {

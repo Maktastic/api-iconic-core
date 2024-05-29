@@ -1,10 +1,13 @@
+import dotenv from "dotenv";
+dotenv.config()
 import { Server } from "socket.io";
 import jwt from 'jsonwebtoken';
+import axios from "axios";
 
 export default function createBitcoinWebsocket(server, express_server) {
     const io = new Server(server, {
         cors: {
-            origin: { path: ['http://localhost:5000'] }
+            origin: { path: [process.env.SERVER_PATH] }
         }
     });
 

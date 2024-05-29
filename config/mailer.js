@@ -39,7 +39,74 @@ const sendVerificationEmail = (to, id, token) => {
         text
     };
 
-    return transporter.sendMail(mailOptions);
+    return transporter.sendMail(mailOptions).catch((error) => { return error });
 };
 
-export default sendVerificationEmail
+const sendForgotPassword = (to, code) => {
+    const subject = 'Forgot Password'
+    const text = 
+        'We received your request for a single-use code to use with your Iconic BTC account.\n' +
+        '\n' +
+        `Your single-use code is: ${code}` +
+        '\n' +
+        'If you didn\'t request this code, you can safely ignore this email. Someone else might have typed your email address by mistake.' +
+        '\n' + 
+        'The requested code is valid for 15 mins.';
+    const mailOptions = {
+        from: {
+            name: 'Support Iconic Core',
+            address: process.env.EMAIL_USERNAME
+        },
+        to,
+        subject,
+        text
+    }
+
+    return transporter.sendMail(mailOptions).catch((error) => { return error });
+}
+
+const sendChangePassword = (to, code) => {
+    const subject = 'Change Password Request'
+    const text =
+        'We received your request for a single-use code to use with your Iconic BTC account.\n' +
+        '\n' +
+        `Your single-use code is: ${code}` +
+        '\n' +
+        'The requested code is valid for 15 mins.';
+    const mailOptions = {
+        from: {
+            name: 'Support Iconic Core',
+            address: process.env.EMAIL_USERNAME
+        },
+        to,
+        subject,
+        text
+    }
+
+    return transporter.sendMail(mailOptions).catch((error) => { return error });
+}
+
+const sendChangeEmail = (to, code) => {
+    const subject = 'Change Email Request'
+    const text =
+        'We received your request for a single-use code to use with your Iconic BTC account.\n' +
+        '\n' +
+        `Your single-use code is: ${code}` +
+        '\n' +
+        'If you didn\'t request this code, you can safely ignore this email. Someone else might have typed your email address by mistake.' +
+        '\n' +
+        'The requested code is valid for 15 mins.';
+    const mailOptions = {
+        from: {
+            name: 'Support Iconic Core',
+            address: process.env.EMAIL_USERNAME
+        },
+        to,
+        subject,
+        text
+    }
+
+    return transporter.sendMail(mailOptions).catch((error) => { return error });
+}
+
+export { sendVerificationEmail, sendForgotPassword, sendChangePassword, sendChangeEmail }

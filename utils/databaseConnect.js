@@ -10,8 +10,6 @@ if(!MONGODBURI) {
     throw new Error('MONGODB URI IS MISSING')
 }
 
-
-
 // Connect to MongoDB
 export const connectDatabase = async () => {
     let retries = 5; // Number of connection retries
