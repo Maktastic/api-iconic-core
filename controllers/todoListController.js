@@ -24,7 +24,7 @@ const todoListController = {
                     resolve()
                 })
                 .catch((error) => {
-                    console.log(error)
+                    Logbook.error(error)
                     res.status(400).send({ error: error, status: 400 })
                     reject(error)
                 })

@@ -16,8 +16,6 @@ const calulateController = {
 
             const data = result.data[0]
 
-            console.log(data)
-
             const SECONDS_PER_DAY = 86400;
             const BLOCK_REWARD = data?.reward_block;
             const NETWORK_HASHRATE = data?.network_hashrate;

@@ -15,7 +15,7 @@ passport.use(new GoogleStrategy({
             const account = await Account.findOne({ googleID: profile.id });
 
             if (account) {
-                console.log('User Account already exists');
+                Logbook.error('User Account already exists');
                 return cb(null, account, { message: 'Log In Successfully' });
             }
 
@@ -27,10 +27,10 @@ passport.use(new GoogleStrategy({
                 googleID: profile.id
             });
 
-            console.log('New User Account created');
+            Logbook.info('New User Account created');
             return cb(null, newAccount, { message: 'Account Created Successfully!' });
         } catch (error) {
-            console.error('Error processing Google authentication:', error);
+            Logbook.error('Error processing Google authentication:', error);
             return cb(error, { message: 'Error processing Google authentication' }); // Pass any errors to the cb callback
         }
     }));

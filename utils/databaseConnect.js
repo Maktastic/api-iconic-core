@@ -13,7 +13,6 @@ if(!MONGODBURI) {
 // Connect to MongoDB
 export const connectDatabase = async () => {
     let retries = 5; // Number of connection retries
-    console.log(MONGODBURI)
     while (retries) {
         try {
             const options = {

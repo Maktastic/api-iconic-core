@@ -3,6 +3,7 @@ dotenv.config()
 import { Server } from "socket.io";
 import jwt from 'jsonwebtoken';
 import axios from "axios";
+import Logbook from "../config/logger.js";
 
 export default function createBitcoinWebsocket(server, express_server) {
     const io = new Server(server, {
@@ -29,7 +30,6 @@ export default function createBitcoinWebsocket(server, express_server) {
     };
 
     io.use(authenticateSocket).on('connection', (socket) => {
-        // console.log('Socket connected:', socket.decoded._id);
         // Fetch Bitcoin price and emit to the client every 5 seconds
         const fetchBitcoinPrice = async () => {
             try {
@@ -41,15 +41,14 @@ export default function createBitcoinWebsocket(server, express_server) {
                         'X-CMC_PRO_API_KEY': 'b54bcf4d-1bca-4e8e-9a24-22ff2c3d462c'
                     }
                 }).then((response) => {
-                    console.log(response)
                     io.emit('bitcoinPriceUpdate', bitcoinPrice);
 
                 }).catch((error) => {
-                    console.error(error);
+                    Logbook.error(error);
                 })
 
             } catch (error) {
-                console.error('Error fetching Bitcoin price:', error.message);
+                Logbook.error('Error fetching Bitcoin price:', error.message);
             }
         };
 
@@ -58,7 +57,7 @@ export default function createBitcoinWebsocket(server, express_server) {
         // Handle socket disconnections
         socket.on('disconnect', () => {
             clearInterval(bitcoinPriceInterval);
-            console.log('Socket disconnected:');
+            Logbook.info('Socket disconnected:');
         });
 
     });
