@@ -14,6 +14,7 @@ import * as path from "node:path";
 import { fileURLToPath } from 'url'
 import createBitcoinSocket from "./config/socket.js";
 import compression from "compression";
+import {invokePhoneCode} from "./serverless/sendPhoneCode.js";
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -46,6 +47,30 @@ async function serverInit() {
         Logbook.error('Base Path is missing')
         throw new Error('Base Path is missing')
     }
+
+    // invokePhoneCode('+971556367628')
+
+    app.use((err, req, res, next) => {
+        Logbook.error(err.stack); // Log the error stack for debugging
+
+        // Customize the error response
+        res.status(err.status || 500).send({ 
+            error: {
+                message: err.message,
+                status: err.status || 500
+            }
+        });
+    });
+
+    // Handle 404 - Resource Not Found
+    app.use((req, res, next) => {
+        res.status(404).json({
+            error: {
+                message: 'Resource not found',
+                status: 404
+            }
+        });
+    });
 
     // Server Listener
     const PORT = process.env.PORT || 5000

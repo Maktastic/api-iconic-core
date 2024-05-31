@@ -119,7 +119,7 @@ const accountController = {
                             return res.status(400).send({ error: 'Account already exists with google. Please log in using google account', status: 400 })
                         }
                         
-                        if(!user?.isEmailVerified) {
+                        else if(!user?.isEmailVerified) {
                             const temporaryToken = await generateTemporaryToken(user._id)
                             Logbook.error('verify email to access dashboard: ', user._id)
                             user.tempToken = temporaryToken
@@ -518,9 +518,12 @@ const accountController = {
                     });
 
                     if (verified) {
-                        userDoc.twoFactorAuth = true
-                        await userDoc.save()
-                        Logbook.info(`${user._id}: 2FA verification successfull`)
+                        
+                        if(!userDoc.twoFactorAuth) {
+                            userDoc.twoFactorAuth = true
+                            await userDoc.save()
+                        }
+                        Logbook.info(`${user._id}: 2FA verification successful`)
                         return res.status(200).send({ message: '2FA verification successful', status: 200 });
                     } else {
                         Logbook.error('Invalid Token')
