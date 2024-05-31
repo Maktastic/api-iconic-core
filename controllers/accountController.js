@@ -4,10 +4,12 @@ import {
     generateRefreshToken,
     generateTemporaryCode,
     generateTemporaryToken,
-    generateToken
+    generateToken, generateTwoFactorSecret
 } from "../utils/tokenGeneration.js";
 import Logbook from "../config/logger.js";
 import {sendVerificationEmail, sendForgotPassword, sendChangePassword, sendChangeEmail} from "../config/mailer.js";
+import qrcode from "qrcode";
+import speakeasy from "speakeasy";
 
 const accountController = {
     
@@ -111,6 +113,11 @@ const accountController = {
                 .then(async (result) => {
                     if(result) {
                         let payload = { _id: user._id.toString() }
+
+                        if(user?.isEmailVerified && user?.googleID) {
+                            Logbook.error(`${user._id}: Google Account exists. Login using google.`)
+                            return res.status(400).send({ error: 'Account already exists with google. Please log in using google account', status: 400 })
+                        }
                         
                         if(!user?.isEmailVerified) {
                             const temporaryToken = await generateTemporaryToken(user._id)
@@ -120,8 +127,8 @@ const accountController = {
                             await sendVerificationEmail(user.email, user._id, temporaryToken)
                             return res.status(200).send({ error: 'Verify email address to access dashboard!', emailVerify: user.isEmailVerified })
                             resolve()
-                        } else {
-                            ;
+                        }
+                        else {
                             const accessToken = await generateToken(payload)
                             const refreshToken = await generateRefreshToken(payload)
                             res.cookie('refreshToken', refreshToken, {
@@ -450,6 +457,86 @@ const accountController = {
                 Logbook.error(`${user._id}: User not found`)
                 return res.status(400).send({ error: error, status: 400 })
             })
+    },
+
+    twoFactorAuth: async (req, res) => {
+        if(req.isAuthenticated) {
+            // check if user is authenticated
+            // check if user exists
+            const user = req.user
+            if(user && user.twoFactorAuth) {
+                Logbook.error(`${user._id}: Two Factor is already setup [ 400 ]`)
+                return res.status(400).send({ error: 'Two Factor is already setup', status: 400 })
+            }
+            
+            await Account.findOne({ _id: user._id })
+                .then(async (userDoc) => {
+
+                    const secret = await generateTwoFactorSecret()
+                    userDoc.twoFactorAuthSecret = secret.base32
+                    await userDoc.save().then(() => {
+                        qrcode.toDataURL(secret.otpauth_url, (err, data_url) => {
+                            if (err) {
+                                Logbook.error(error)
+                                return res.status(400).send({ error: 'Error generating QR code', status: 400 });
+                            }
+                            Logbook.info('QR Code generated successfully')
+                            return res.status(200).json({ qrCodeUrl: data_url, secret: secret.base32, status: 200 });
+                        });
+                    }).catch((error) => {
+                        Logbook.error(error)
+                        return res.status(400).send({ error: error, status: 400 })
+                    })
+                    
+                }).catch((error) => {
+                    Logbook.error(`${user._id}: User not found [ 400 ]`)
+                    return res.status(400).send({ error: error, status: 400 })
+                })
+
+        } else {
+            return res.status(401).send({ error: 'Unauthorized', status: 400 })
+        }
+    },
+
+    verifyTwoFactorAuth: async (req, res) => {
+        if(req.isAuthenticated) {
+            
+            const user = req.user
+            
+            await Account.findOne({ _id: user._id }) 
+                .then(async (userDoc) => {
+                    
+                    if(!userDoc.twoFactorAuthSecret) {
+                        Logbook.error('Account has not enabled 2 factor authorization.')
+                        return res.status(400).send({ error: 'Account has not enabled 2 factor authorization.', status: 400 })
+                    }
+
+                    const verified = await speakeasy.totp.verify({
+                        secret: userDoc.twoFactorAuthSecret,
+                        encoding: 'base32',
+                        token: req.body.token
+                    });
+
+                    if (verified) {
+                        userDoc.twoFactorAuth = true
+                        await userDoc.save()
+                        Logbook.info(`${user._id}: 2FA verification successfull`)
+                        return res.status(200).send({ message: '2FA verification successful', status: 200 });
+                    } else {
+                        Logbook.error('Invalid Token')
+                        return res.status(401).send({ error: 'Invalid Token', status: 400 })
+                    }
+                    
+                })
+                .catch((error) => {
+                    Logbook.error(`${user._id}: User not found [ 400 ]`)
+                    return res.status(400).send({ error: error, status: 400 })
+                })
+            
+            
+        } else {
+            return res.status(401).send({ error: 'Unauthorized', status: 400 })
+        }
     }
 
     

@@ -8,6 +8,7 @@
     "start": "nodemon server.js"
   },
   "dependencies": {
+    "aws-sdk": "^2.1630.0",
     "axios": "^1.7.2",
     "bcrypt": "^5.1.1",
     "body-parser": "^1.20.2",
@@ -30,8 +31,10 @@
     "passport-google-oauth20": "^2.0.0",
     "passport-jwt": "^4.0.1",
     "path": "^0.12.7",
+    "qrcode": "^1.5.3",
     "redis": "^4.6.14",
     "socket.io": "^4.7.5",
+    "speakeasy": "^2.0.0",
     "winston": "^3.13.0"
   }
 }

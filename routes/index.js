@@ -30,6 +30,7 @@ routes.post('/login', validateLogin, accountController.login)
 // ---------------- Authenticated Routes -----------------------
 routes.post('/verify/email', AuthenticateAPI, accountController.validateEmail)
 routes.post('/calculate', AuthenticateAPI, validateCalculation, calculateController.calculate)
+
 // ---------------- Authenticated Routes -----------------------
 
 // ---------------- Secure Google Authentication -----------------------
@@ -59,5 +60,8 @@ routes.post('/user/reset-email', AuthenticateAPI, accountController.resetEmail)
 routes.post('/user/change-password', AuthenticateAPI, validateChangePassword, accountController.changePassword)
 routes.post('/user/change-email', AuthenticateAPI, validateChangeEmail, accountController.changeEmail)
 // ---------------- Changes -----------------------
+
+routes.get('/user/two-factor-auth', AuthenticateAPI, accountController.twoFactorAuth)
+routes.post('/user/two-factor-auth', AuthenticateAPI, accountController.verifyTwoFactorAuth)
 
 export default routes

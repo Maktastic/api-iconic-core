@@ -41,6 +41,9 @@ const account = new mongoose.Schema({
       type: Boolean,
       default: false  
     },
+    twoFactorAuthSecret: {
+      type: String  
+    },
     isEmailVerified: {
         type: Boolean,
         default: false
