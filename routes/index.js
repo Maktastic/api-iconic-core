@@ -1,21 +1,11 @@
 import express from "express";
 import passport from "passport";
+import multer from "multer";
+import fileFilter from "../utils/fileFilter.js";
 
 const routes = express.Router()
 
-// const AuthenticateAPI = passport.authenticate('jwt', { session: false })
-
-const AuthenticateAPI = (req, res, next) => {
-    passport.authenticate('jwt', { session: false }, (err, user, info) => {
-        if (err) {
-            return next(err);
-        }
-        if (!user) {
-            return res.status(401).send({ error: 'Unauthorized Access', status: 401 });
-        }
-        next();
-    })(req, res, next);
-};
+const AuthenticateAPI = passport.authenticate('jwt', { session: false })
 
 // Controllers
 import accountController from "../controllers/accountController.js";
@@ -33,6 +23,8 @@ import validateForgotPassword from "../validations/validateForgotPassword.js";
 import validateResetPassword from "../validations/validateResetPassword.js";
 import validateChangePassword from "../validations/validateChangePassword.js";
 import validateChangeEmail from "../validations/validateChangeEmail.js";
+import uploadController from "../controllers/uploadController.js";
+import validateUploads from "../validations/validateUploads.js";
 
 // ---------------- Non-Authenticated Routes -----------------------
 routes.post('/register', validateRegister, accountController.register)
@@ -73,7 +65,13 @@ routes.post('/user/change-password', AuthenticateAPI, validateChangePassword, ac
 routes.post('/user/change-email', AuthenticateAPI, validateChangeEmail, accountController.changeEmail)
 // ---------------- Changes -----------------------
 
+// ---------------- Two Factor Authentication -----------------------
 routes.get('/user/two-factor-auth', AuthenticateAPI, accountController.twoFactorAuth)
 routes.post('/user/two-factor-auth', AuthenticateAPI, accountController.verifyTwoFactorAuth)
+// ---------------- Two Factor Authentication -----------------------
+
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage,  fileFilter: fileFilter });
+routes.post('/upload/documents', validateUploads, AuthenticateAPI, upload.array('files', 1), uploadController.uploadDocuments)
 
 export default routes

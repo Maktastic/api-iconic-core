@@ -118,16 +118,6 @@ const accountController = {
                             Logbook.error(`${user._id}: Google Account exists. Login using google.`)
                             return res.status(400).send({ error: 'Account already exists with google. Please log in using google account', status: 400 })
                         }
-                        
-                        else if(!user?.isEmailVerified) {
-                            const temporaryToken = await generateTemporaryToken(user._id)
-                            Logbook.error('verify email to access dashboard: ', user._id)
-                            user.tempToken = temporaryToken
-                            await user.save()
-                            await sendVerificationEmail(user.email, user._id, temporaryToken)
-                            return res.status(200).send({ error: 'Verify email address to access dashboard!', emailVerify: user.isEmailVerified })
-                            resolve()
-                        }
                         else {
                             const accessToken = await generateToken(payload)
                             const refreshToken = await generateRefreshToken(payload)

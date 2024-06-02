@@ -84,11 +84,35 @@ const account = new mongoose.Schema({
     },
     resetExpiry: {
         type: Number
+    },
+    documents: {
+        passport: {
+            fileName: { type: String, default: null },
+            pathUrl: { type: String, default: null },
+            status: { type: String, default: 'pending' }
+        },
+        id: {
+            fileName: { type: String, default: null },
+            pathUrl: { type: String, default: null },
+            status: { type: String, default: 'pending' }
+        },
+        kyc: {
+            fileName: { type: String, default: null },
+            pathUrl: { type: String, default: null },
+            status: { type: String, default: 'pending' }
+        },
+        utility_bills: {
+            fileName: { type: String, default: null },
+            pathUrl: { type: String, default: null },
+            status: { type: String, default: 'pending' }
+        }
     }
+
 })
 
 // Create Indexes
 account.index({ email: 1 }, { unique: true, sparse: true });
+account.index({ customerID: 1 }, { unique: true })
 
 account.pre('save', async function(next) {
     if (!this.isModified || !this.isModified('password')) {
