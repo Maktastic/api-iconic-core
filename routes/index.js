@@ -11,6 +11,8 @@ const AuthenticateAPI = passport.authenticate('jwt', { session: false })
 import accountController from "../controllers/accountController.js";
 import calculateController from "../controllers/calculateController.js";
 import todoListController from "../controllers/todoListController.js";
+import cartController from "../controllers/cartController.js";
+import uploadController from "../controllers/uploadController.js";
 
 //Validations
 import validateLogin from "../validations/validateLogin.js";
@@ -23,7 +25,6 @@ import validateForgotPassword from "../validations/validateForgotPassword.js";
 import validateResetPassword from "../validations/validateResetPassword.js";
 import validateChangePassword from "../validations/validateChangePassword.js";
 import validateChangeEmail from "../validations/validateChangeEmail.js";
-import uploadController from "../controllers/uploadController.js";
 import validateUploads from "../validations/validateUploads.js";
 
 // ---------------- Non-Authenticated Routes -----------------------
@@ -70,8 +71,14 @@ routes.get('/user/two-factor-auth', AuthenticateAPI, accountController.twoFactor
 routes.post('/user/two-factor-auth', AuthenticateAPI, accountController.verifyTwoFactorAuth)
 // ---------------- Two Factor Authentication -----------------------
 
+// ---------------- Upload Secure Documents -----------------------
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage,  fileFilter: fileFilter });
 routes.post('/upload/documents', validateUploads, AuthenticateAPI, upload.array('files', 1), uploadController.uploadDocuments)
+// ---------------- Upload Secure Documents -----------------------
+
+// ---------------- Cart Apis -----------------------
+routes.post('/cart', cartController.createCart)
+
 
 export default routes

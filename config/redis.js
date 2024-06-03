@@ -8,6 +8,7 @@ import Logbook from "./logger.js";
 
 const redisClient = redis.createClient({
     url: process.env.REDIS_URL,
+    connectTimeout: 5000 // Increase the timeout to 5 seconds
 })
 
 redisClient.on('error', (err) => Logbook.error('Redis Client Error', err));

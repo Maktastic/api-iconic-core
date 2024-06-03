@@ -20,6 +20,10 @@ const account = new mongoose.Schema({
       type: Boolean,
       default: false  
     },
+    adminLevel: {
+        type: Number,
+        default: 0
+    },
     surname: {
         type: String,
     },

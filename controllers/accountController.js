@@ -29,70 +29,50 @@ const accountController = {
             }
             
             mobile_number = Number(mobile_number)
-            
+
             // Check if the user already exists
-            const existingAccount = Account.findOne({ $or: [ { mobile_number }, { email } ]})
+            const existingAccount = await Account.findOne({ $or: [ { mobile_number }, { email } ]})
             if(!existingAccount) {
-                return res.status(400).send({ message: 'Account already exists' })   
+                return res.status(400).send({ error: 'Account already exists', status: 400 })
             }
             
             await Account.create({
                 name, surname, mobile_number, email, password
             }).then(async (result) => {
-                if(result && _.size(result) !== 0) {   
-                    
-                    if(!result?.isEmailVerified) {
-                        const _id = result?._id
-                        const temporaryToken = await generateTemporaryToken(_id)
-                        await Account.findOne({ _id: _id })
-                            .then(async (tempUser) => {
-                                tempUser.tempToken = temporaryToken
-                                await tempUser.save()
-                            })
-                            .then(async () => {
-                                Logbook.info(`verify email to login: ${ _id }`)
-                                const sendEmail = await sendVerificationEmail(result?.email, _id, temporaryToken)
-                                if(sendEmail && sendEmail.response) {
-                                    return res.status(200).send({
-                                        message: 'Account created successfully. Verify email address to login',
-                                        login: result?.isEmailVerified,
-                                        status: 200
-                                    })
-                                } else {
-                                    return res.status(400).send({
-                                        message: 'Email was not successful, please try again later',
-                                        status: 400
-                                    })
-                                }
-                                
-                            }).catch((error) => {
-                                Logbook.error(error)
-                                res.status(400).send({ error: error, status: 400 })
-                                reject(error)
-                            })
-                        
-                    } else {
-                        let payload = { _id: result?._id.toString() }
-                        const accessToken = await generateToken(payload)
-                        const refreshToken = await generateRefreshToken(payload)
-                        res.cookie('refreshToken', refreshToken, {
-                            httpOnly: true,
-                            secure: process.env.NODE_ENV === 'production', // Set to true in production
-                            maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days expiration
-                        });
-                        let userData = result
-                        userData = _.omit(userData.toObject(), ['password'])
-                        res.status(200).json({ userAccount: userData, token: accessToken, message: 'Account Created Successfully', status: 200 });
-                        Logbook.info('Account Created Successfully')
-                    }
+                if(result && _.size(result) !== 0) {
+
+                    let payload = { _id: result?._id.toString() }
+                    const accessToken = await generateToken(payload)
+                    const refreshToken = await generateRefreshToken(payload)
+
+                    res.cookie('refreshToken', refreshToken, {
+                        httpOnly: true,
+                        secure: process.env.NODE_ENV === 'production', // Set to true in production
+                        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days expiration
+                    });
+                    res.cookie('accessToken', accessToken, {
+                        httpOnly: true,
+                        secure: process.env.NODE_ENV === 'production', // Set to true in production
+                        maxAge: 24 * 60 * 60 * 1000 // 24 hours expiration
+                    });
+                    let userData = result
+                    userData = _.omit(userData.toObject(), ['password'])
+                    Logbook.info('Account Created Successfully')
+                    res.status(200).json({ userAccount: userData, token: accessToken, message: 'Account Created Successfully', status: 200 });
                 }
 
             }).catch((error) => {
-                Logbook.error(error)
-                res.status(400).send({ message: 'Error Creating User Account', error: error?.errorResponse, status: 400 })
+                const ResponseError = error.errorResponse
+                Logbook.error(ResponseError)
+                if(ResponseError && ResponseError.code === 11000) {
+                    const key = Object.keys(ResponseError?.keyPattern)
+                    return res.status(400).send({ error: `${key} is already being used`, status: 400 })
+                }
+                else {
+                    return res.status(400).send({ error: 'Error Creating User Account', errorResponse: error?.errorResponse, status: 400 })
+                }
             })
-            
-            
+
         }).catch((error) => {
             Logbook.error(error)
             res.status(500).send('Server Error')
