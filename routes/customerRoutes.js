@@ -10,7 +10,6 @@ const AuthenticateAPI = passport.authenticate('jwt', { session: false })
 // Controllers
 import accountController from "../controllers/customer/accountController.js";
 import calculateController from "../controllers/customer/calculateController.js";
-import todoListController from "../controllers/admin/todoListController.js";
 import cartController from "../controllers/customer/cartController.js";
 import uploadController from "../controllers/customer/uploadController.js";
 
@@ -18,9 +17,6 @@ import uploadController from "../controllers/customer/uploadController.js";
 import validateLogin from "../validations/customer/validateLogin.js";
 import validateRegister from "../validations/customer/validateRegister.js";
 import validateCalculation from "../validations/customer/validateCalculation.js";
-import insertListValidation from "../validations/todoList/insertList.js";
-import deleteListValidation from "../validations/todoList/deleteList.js";
-import updateListValidation from "../validations/todoList/updateList.js";
 import validateForgotPassword from "../validations/customer/validateForgotPassword.js";
 import validateResetPassword from "../validations/customer/validateResetPassword.js";
 import validateChangePassword from "../validations/customer/validateChangePassword.js";
@@ -44,12 +40,6 @@ routes.get('/google/callback', passport.authenticate('google',
     { failureRedirect: `${process.env.BASE_PATH}/login?google-auth-failure&status=400` }), 
     accountController.googleSuccess);
 
-
-// ---------------- TODO API's -----------------------
-routes.get('/todo/all', AuthenticateAPI, todoListController.getAllList)
-routes.post('/todo/add', AuthenticateAPI, insertListValidation, todoListController.addToList)
-routes.post('/todo/delete', AuthenticateAPI, deleteListValidation, todoListController.deleteList)
-routes.post('/todo/update', AuthenticateAPI, updateListValidation, todoListController.updateList)
 
 
 // ---------------- Forgot Password -----------------------

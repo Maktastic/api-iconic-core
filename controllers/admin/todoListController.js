@@ -1,6 +1,5 @@
 import Account from "../../schemas/accountSchema.js";
 import Logbook from "../../config/logger.js";
-import todoSchema from "../../schemas/todoSchema.js";
 import _ from 'lodash'
 import mongoose from "mongoose";
 import TODO from "../../schemas/todoSchema.js";
@@ -12,9 +11,25 @@ const todoListController = {
             const user = req?.user
             const userID = new mongoose.Types.ObjectId(user._id)
 
-            await TODO.find({ userID: userID, status: true }).then((response) => {
+            const page = parseInt(req.query.page) || 1; // Default to page 1 if not provided
+            const limit = parseInt(req.query.limit) || 10; // Default to 10 items per page if not provided
+            const skip = (page - 1) * limit;
+
+            const totalLists = await TODO.countDocuments({});
+            const totalPages = Math.ceil(totalLists / limit);
+
+            await TODO.find({ userID: userID, status: true })
+                .skip(skip)
+                .limit(limit)
+                .then((response) => {
                     if(response && response.length !== 0) {
-                        return res.status(200).send({ todoList: response, status: 200 })
+                        return res.status(200).send({ todoList: response, status: 200, meta: {
+                                total_pages: totalPages,
+                                currentPage: page,
+                                total_lists: totalLists,
+                                isLastPage: page >= totalPages
+                            }
+                        })
                     }
                     else {
                         return res.status(400).send({ error: 'No List found', status: 400 })
@@ -31,14 +46,8 @@ const todoListController = {
     addToList: async(req, res) => {
 
         return new Promise(async (resolve, reject) => {
-            const user = req?.user
             let { title, message, userID } = req.body
             userID = new mongoose.Types.ObjectId(userID)
-
-            if(!user.isAdmin) {
-                Logbook.error(`${user._id}: Unauthorized Access`)
-                return res.status(401).send({ error: 'Unauthorized Access', status: 401 })
-            }
 
             await TODO.create({
                 title: title,
@@ -65,12 +74,17 @@ const todoListController = {
             let { userID, listID } = req.body
             userID = new mongoose.Types.ObjectId(userID)
 
-            if(!user.isAdmin) {
-                Logbook.error(`${user._id}: Unauthorized Access`)
-                return res.status(401).send({ error: 'Unauthorized Access', status: 401 })
+            try {
+                const checkListExists = await TODO.findOne({ _id: listID, userID: userID })
+                if(!checkListExists) {
+                    return res.status(404).send({ error: 'List does not exist', status: 404 })
+                }
+            }
+            catch(error) {
+                return res.status(400).send({ error: error, status: 400})
             }
 
-            await TODO.deleteOne({ userID: userID, status: true, _id: listID })
+            await TODO.deleteOne({ userID: userID, _id: listID })
                 .then((response) => {
                     if(response) {
                         return res.status(200).send({ message: 'List deleted successfully', status: 200 })
@@ -84,6 +98,9 @@ const todoListController = {
                     return res.status(400).send({ error: error, status: 400 })
                 })
         })
+        .catch((error) => {
+            return res.status(500).send({ error: 'Internal Server Error', status: 500 })
+        } )
     },
 
     updateList: async (req, res) => {
@@ -95,10 +112,6 @@ const todoListController = {
 
         try {
             // Check if the user is admin
-            if (!user.isAdmin) {
-                Logbook.error(`${user._id}: Unauthorized Access`);
-                return res.status(401).send({ error: 'Unauthorized Access', status: 401 });
-            }
 
             const todo = await TODO.findOne({ _id: listID, userID: userObjectId });
             if (!todo) {
@@ -117,6 +130,32 @@ const todoListController = {
             Logbook.error(error);
             res.status(400).send({ error: 'Something went wrong, please try again later.', status: 400 });
         }
+    },
+
+    getAdminLists: async ( req, res ) => {
+
+        let { id } = req.params;
+        id = new mongoose.Types.ObjectId(id)
+
+        const checkUserExists = await Account.findOne({ _id: id })
+
+        if(!checkUserExists) {
+            return res.status(404).send({ error: 'User not found', status: 404 })
+        }
+
+        await TODO.find({ userID: id } )
+            .then((response) => {
+
+                if(response) {
+                   return res.status(200).send({ todo_lists: response, status: 200 })
+                }
+
+            })
+            .catch((error) => {
+                Logbook.error(error)
+                return res.status(400).send({ error: 'No List Found', status: 400 })
+            })
+
     }
 
 

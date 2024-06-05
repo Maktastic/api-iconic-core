@@ -1,14 +1,17 @@
 import mongoose from "mongoose";
 import Cart from "../../schemas/cartSchema.js";
-import BuyMiner from "../../schemas/minerSchema.js";
+import Product from "../../schemas/productSchema.js";
 
 
 const cartController = {
 
     createCart: async ( req, res ) => {
 
-        let { userID, quantity, price, buyMinerID, minerDescription } = req.body
-        let buyMinerData = {};
+        let { userID, quantity, price, productID, minerDescription } = req.body
+        let productData = {};
+
+        userID = new mongoose.Types.ObjectId(userID)
+        productID = new mongoose.Types.ObjectId(productID)
 
         // get miner details
 
@@ -16,15 +19,15 @@ const cartController = {
             userID: userID,
             quantity: quantity,
             price: price,
-            buyMinerID: buyMinerID,
+            productID: productID,
             minerDescription: minerDescription
         }
 
         // check if product exists
-        const checkBuyMiner = await BuyMiner.findOne({ _id: buyMinerID })
+        const productExists = await Product.findOne({ _id: productID })
 
-        console.log(checkBuyMiner)
-        if(!checkBuyMiner) {
+        console.log(productExists)
+        if(!productExists) {
             return res.status(404).send({ error: "Product doesn't exists", status: 404})
         }
 

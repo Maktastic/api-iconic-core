@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import chargesSchema from "./chargesSchema.js";
 
-const buyMiner = new mongoose.Schema({
+const product = new mongoose.Schema({
     expected_price: {
         type: Number,
         required: true
@@ -17,7 +17,6 @@ const buyMiner = new mongoose.Schema({
 
     type: {
         type: String,
-        default: 'buyMiner'
     },
 
     charges: [chargesSchema]
@@ -25,5 +24,5 @@ const buyMiner = new mongoose.Schema({
 
 }, { timestamps: true })
 
-const BuyMiner = mongoose.model('BuyMiner', buyMiner)
-export default BuyMiner
+const Product = mongoose.model('Product', product)
+export default Product

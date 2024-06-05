@@ -24,12 +24,12 @@ const cart = new mongoose.Schema({
         type: String
     },
 
-    buyMinerID: {
+    productID: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'BuyMiner',
     },
 
-    buyMinerData: {
+    productData: {
         type: Object
     },
 
