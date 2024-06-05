@@ -1,20 +1,40 @@
-import Account from "../schemas/accountSchema.js";
+import Account from "../../schemas/accountSchema.js";
 import _ from 'lodash'
 import {
     generateRefreshToken,
     generateTemporaryCode,
-    generateTemporaryToken,
-    generateToken, generateTwoFactorSecret
-} from "../utils/tokenGeneration.js";
-import Logbook from "../config/logger.js";
-import {sendVerificationEmail, sendForgotPassword, sendChangePassword, sendChangeEmail} from "../config/mailer.js";
+    generateToken,
+    generateTwoFactorSecret
+} from "../../utils/tokenGeneration.js";
+import Logbook from "../../config/logger.js";
+import {sendChangeEmail, sendChangePassword, sendForgotPassword} from "../../config/mailer.js";
 import qrcode from "qrcode";
 import speakeasy from "speakeasy";
+import parsePhoneNumber from 'libphonenumber-js'
+import mongoose from "mongoose";
 
 const accountController = {
     
     getUser: async (req, res) => {
-        
+
+        if(req.isAuthenticated()) {
+            const { _id } = req.user
+
+            await Account.findOne({ _id: new mongoose.Types.ObjectId(_id) }, { password: 0 })
+                .then((response) => {
+                    if(response) {
+                        return res.status(200).send({ userData: response, status: 200 })
+                    }
+                })
+                .catch((error) => {
+                    return res.status(400).send({ error: 'User not found', status: 400 })
+                })
+
+        } else {
+            return res.status(400).send({ error: 'Unauthorized Access', status: 400 })
+        }
+
+
     },
     
     register: async (req, res) => {
@@ -23,17 +43,21 @@ const accountController = {
             let { name, surname, mobile_number, email, password } = req.body;
 
             // Validate UAE phone number format
-            const phoneRegex = /^\+971\d{9}$/;
-            if (!phoneRegex.test(mobile_number)) {
-                return res.status(400).send({ message: 'Invalid UAE phone number format'});
+            if(!mobile_number.includes('+')) {
+                mobile_number = '+' + mobile_number
             }
-            
-            mobile_number = Number(mobile_number)
+
+            let parsedNumber = parsePhoneNumber(mobile_number)
+            let isValidNumber = parsedNumber.isValid()
+
+            if(!isValidNumber) {
+                return res.status(400).send({ error: 'Mobile Number is invalid'})
+            }
 
             // Check if the user already exists
-            const existingAccount = await Account.findOne({ $or: [ { mobile_number }, { email } ]})
-            if(!existingAccount) {
-                return res.status(400).send({ error: 'Account already exists', status: 400 })
+            const existingAccount = await Account.findOne({ email } )
+            if(existingAccount) {
+                return res.status(400).send({ error: 'Email already exists', status: 400 })
             }
             
             await Account.create({
@@ -46,14 +70,16 @@ const accountController = {
                     const refreshToken = await generateRefreshToken(payload)
 
                     res.cookie('refreshToken', refreshToken, {
-                        httpOnly: true,
+                        httpOnly: process.env.NODE_ENV === 'production',
                         secure: process.env.NODE_ENV === 'production', // Set to true in production
+                        sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
                         maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days expiration
                     });
                     res.cookie('accessToken', accessToken, {
-                        httpOnly: true,
+                        httpOnly: process.env.NODE_ENV === 'production',
                         secure: process.env.NODE_ENV === 'production', // Set to true in production
-                        maxAge: 24 * 60 * 60 * 1000 // 24 hours expiration
+                        sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+                        maxAge: 24 * 60 * 60 * 1000 // 7 days expiration
                     });
                     let userData = result
                     userData = _.omit(userData.toObject(), ['password'])
@@ -63,7 +89,7 @@ const accountController = {
 
             }).catch((error) => {
                 const ResponseError = error.errorResponse
-                Logbook.error(ResponseError)
+                Logbook.error(ResponseError.errmsg)
                 if(ResponseError && ResponseError.code === 11000) {
                     const key = Object.keys(ResponseError?.keyPattern)
                     return res.status(400).send({ error: `${key} is already being used`, status: 400 })
@@ -84,54 +110,65 @@ const accountController = {
 
             let { email, password } = req.body;
             
-            const user = await Account.findOne({ email })
-            if(!user) {
-                return res.status(400).send({ error: "Authentication Failed, User Not Found", status: 400 })
-            }
-            
-            await user.comparePasswords(password)
-                .then(async (result) => {
-                    if(result) {
-                        let payload = { _id: user._id.toString() }
+            await Account.findOne({ email } )
+                .then(async (userDoc) => {
+                    if(userDoc) {
+                        const user = userDoc
+                        await userDoc.comparePasswords(password)
+                            .then(async (result) => {
+                                if(result) {
 
-                        if(user?.isEmailVerified && user?.googleID) {
-                            Logbook.error(`${user._id}: Google Account exists. Login using google.`)
-                            return res.status(400).send({ error: 'Account already exists with google. Please log in using google account', status: 400 })
-                        }
-                        else {
-                            const accessToken = await generateToken(payload)
-                            const refreshToken = await generateRefreshToken(payload)
-                            res.cookie('refreshToken', refreshToken, {
-                                httpOnly: true,
-                                secure: process.env.NODE_ENV === 'production', // Set to true in production
-                                maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days expiration
-                            });
-                            res.cookie('accessToken', refreshToken, {
-                                httpOnly: true,
-                                secure: process.env.NODE_ENV === 'production', // Set to true in production
-                                maxAge: 24 * 60 * 60 * 1000 // 7 days expiration
-                            });
-                            let userData = user
-                            userData = _.omit(userData.toObject(), ['password'])
-                            res.status(200).send({ message: "Log In Successful", status: 200, token: accessToken, userAccount: userData })
-                            resolve()
-                        }
+                                    let payload = { _id: user._id.toString() }
+
+                                    if(user?.isEmailVerified && user?.googleID) {
+                                        Logbook.error(`${user._id}: Google Account exists. Login using google.`)
+                                        return res.status(400).send({ error: 'Account already exists with google. Please log in using google account', status: 400 })
+                                    }
+                                    else {
+                                        const accessToken = await generateToken(payload)
+                                        const refreshToken = await generateRefreshToken(payload)
+                                        res.cookie('refreshToken', refreshToken, {
+                                            httpOnly: process.env.NODE_ENV === 'production',
+                                            secure: process.env.NODE_ENV === 'production', // Set to true in production
+                                            sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+                                            maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days expiration
+                                        });
+                                        res.cookie('accessToken', refreshToken, {
+                                            httpOnly: process.env.NODE_ENV === 'production',
+                                            secure: process.env.NODE_ENV === 'production', // Set to true in production
+                                            sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+                                            maxAge: 24 * 60 * 60 * 1000 // 7 days expiration
+                                        });
+                                        let userData = user
+                                        userData = _.omit(userData.toObject(), ['password'])
+                                        userData.fullName = `${userData.name} ${userData.surname}`
+                                        return res.status(200).send({ message: "Log In Successful", status: 200, token: accessToken, userAccount: userData })
+                                    }
+
+
+                                } else {
+                                    return res.status(400).send({ error: 'Email/Password is Incorrect', status: 400 })
+                                }
+
+
+                            })
+                            .catch((error) => {
+                                Logbook.error(error)
+                                return res.status(400).send({ error: 'Something went wrong', status: 400 })
+                            })
                     } else {
-                        Logbook.error({ error: 'Email/Password is Incorrect', status: 400 })
-                        res.status(400).send({ error: 'Email/Password is Incorrect', status: 400 })
-                        reject('Email/Password is Incorrect')
+                        return res.status(400).send({ error: 'user not found', status: 400 })
                     }
+
                 })
                 .catch((error) => {
                     Logbook.error(error)
-                    res.status(400).send({ error: 'Email/Password is Incorrect', status: 400 })
-                    reject(error)
+                    return res.status(400).send({ error: 'user not found', status: 400 })
                 })
             
         }).catch((error) => {
             Logbook.error(error)
-            res.status(500).send('Internal Server Error')
-            reject(error)
+            return res.status(500).send('Internal Server Error')
         })
     },
 
@@ -144,14 +181,16 @@ const accountController = {
             const refreshToken = await generateRefreshToken(payload)
 
             res.cookie('accessToken', refreshToken, {
-                httpOnly: true,
+                httpOnly: process.env.NODE_ENV === 'production',
                 secure: process.env.NODE_ENV === 'production', // Set to true in production
+                sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
                 maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days expiration
             });
 
             res.cookie('refreshToken', refreshToken, {
-                httpOnly: true,
+                httpOnly: process.env.NODE_ENV === 'production',
                 secure: process.env.NODE_ENV === 'production', // Set to true in production
+                sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
                 maxAge: 24 * 60 * 60 * 1000 // 7 days expiration
             });
             

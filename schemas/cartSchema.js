@@ -5,8 +5,8 @@ import crypto from "crypto";
 const cart = new mongoose.Schema({
 
     userID: {
-        type: String,
-        unique: true
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Account',
     },
 
     quantity: {
@@ -19,24 +19,34 @@ const cart = new mongoose.Schema({
         default: Date.now
     },
 
+    // Buy Miner, Container, Shared Mining
+    purchaseType: {
+        type: String
+    },
+
+    buyMinerID: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'BuyMiner',
+    },
+
+    buyMinerData: {
+        type: Object
+    },
+
     cartID: {
         type: Number,
         default: crypto.randomInt(100000, 999999).toString()
     },
 
-    minerPrice: {
+    price: {
         type: Number,
-        default: 0
-    },
-
-    minerCurrency: {
-        type: String,
-        default: 'USD'
-    },
-
-    contractName: {
-        type: String,
+        default: 0,
         required: true
+    },
+
+    currency: {
+        type: String,
+        default: 'USD',
     },
 
     minerDescription: {
@@ -44,3 +54,8 @@ const cart = new mongoose.Schema({
     }
 
 }, { "createdAt": 1 }, { expireAfterSeconds: 86400 } )
+
+cart.index({ cartID: 1 }, { unique: true })
+
+const Cart = mongoose.model('Cart', cart)
+export default Cart

@@ -1,5 +1,5 @@
 import {check, validationResult} from "express-validator";
-import Logbook from "../config/logger.js";
+import Logbook from "../../config/logger.js";
 
 const validateRegister = [
     check('name', 'Name is required').exists(),

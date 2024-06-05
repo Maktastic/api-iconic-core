@@ -1,7 +1,8 @@
 import dotenv from "dotenv";
 dotenv.config()
 import express from 'express'
-import routes from './routes/index.js'
+import routes from './routes/customerRoutes.js'
+import adminRoutes from './routes/adminRoutes.js'
 import morgan from 'morgan'
 import helmet from "helmet";
 import databaseConnect from "./utils/databaseConnect.js";
@@ -14,7 +15,6 @@ import * as path from "node:path";
 import { fileURLToPath } from 'url'
 import createBitcoinSocket from "./config/socket.js";
 import compression from "compression";
-import {invokePhoneCode} from "./serverless/sendPhoneCode.js";
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -43,6 +43,7 @@ async function serverInit() {
     // Routes 
     try {
         app.use(`/api/${basePath}`, routes)
+        app.use('/api/admin', adminRoutes)
     } catch(e) {
         Logbook.error('Base Path is missing')
         throw new Error('Base Path is missing')

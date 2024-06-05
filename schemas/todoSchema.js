@@ -9,7 +9,18 @@ const todoSchema = new mongoose.Schema({
     message: {
         type: String,
         required: true
+    },
+    status: {
+        type: Boolean,
+        default: false
+    },
+    userID: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Account',
+        required: true
     }
 }, { _id: true, timestamps: true })
 
-export default todoSchema
+const TODO = mongoose.model('todo_list', todoSchema)
+
+export default TODO

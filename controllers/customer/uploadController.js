@@ -1,7 +1,7 @@
-import AWS from '../config/aws.js'
-import Logbook from "../config/logger.js";
+import AWS from '../../config/aws.js'
+import Logbook from "../../config/logger.js";
 import _ from "lodash";
-import Account from '../schemas/accountSchema.js'
+import Account from '../../schemas/accountSchema.js'
 
 const uploadController = {
     uploadDocuments: async (req, res) => {

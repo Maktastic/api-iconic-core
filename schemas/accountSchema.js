@@ -60,10 +60,6 @@ const account = new mongoose.Schema({
        type: Number,
        default: 0
     },
-    todoList: {
-      type: [todoSchema],
-      default: []  
-    },
     createdAt: {
         type: Date,
         default: Date.now
