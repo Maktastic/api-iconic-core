@@ -17,7 +17,10 @@ export function generateRefreshToken({ _id }) {
 
 export function generateTemporaryToken({ _id }) {
     if(!_id) return null
-    return jwt.sign({_id}, process.env.ACCOUNT_SECRET_KEY, { expiresIn: '10m' })
+    return {
+            tempToken: jwt.sign({_id}, process.env.ACCOUNT_SECRET_KEY, { expiresIn: '10m' }),
+            expiry: Date.now() + ( 15 * 60 * 1000 )
+    }
 }
 
 export function generateTemporaryCode() {

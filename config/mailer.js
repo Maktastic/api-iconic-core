@@ -28,7 +28,7 @@ transporter.verify((error, success) => {
 // Function to send email
 const sendVerificationEmail = (to, id, token) => {
     const subject = 'Email Verification'
-    const text = 'Confirm your email address by clicking this link: ' + process.env.BASE_PATH + `/verify/${token}`
+    const text = 'Confirm your email address by clicking this link: ' + process.env.BASE_PATH + `/reset-password/${token}`
     const mailOptions = {
         from: {
             name: "Support Iconic Core",
@@ -42,16 +42,16 @@ const sendVerificationEmail = (to, id, token) => {
     return transporter.sendMail(mailOptions).catch((error) => { return error });
 };
 
-const sendForgotPassword = (to, code) => {
+const sendForgotPassword = (to, token) => {
     const subject = 'Forgot Password'
     const text = 
-        'We received your request for a single-use code to use with your Iconic BTC account.\n' +
+        'We received your request for a single-use link to use with your Iconic BTC account.\n' +
         '\n' +
-        `Your single-use code is: ${code}` +
+        `Your single-use link is: ${process.env.BASE_PATH}` + `/reset-password/${token}` +
         '\n' +
         'If you didn\'t request this code, you can safely ignore this email. Someone else might have typed your email address by mistake.' +
         '\n' + 
-        'The requested code is valid for 15 mins.';
+        'The requested link is valid for 15 mins.';
     const mailOptions = {
         from: {
             name: 'Support Iconic Core',

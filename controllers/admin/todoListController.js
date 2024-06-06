@@ -18,7 +18,8 @@ const todoListController = {
             const totalLists = await TODO.countDocuments({});
             const totalPages = Math.ceil(totalLists / limit);
 
-            await TODO.find({ userID: userID, status: true })
+            await TODO.find({ userID: userID })
+                .sort({ status: 1 })
                 .skip(skip)
                 .limit(limit)
                 .then((response) => {

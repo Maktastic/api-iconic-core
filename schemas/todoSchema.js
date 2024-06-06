@@ -21,6 +21,8 @@ const todoSchema = new mongoose.Schema({
     }
 }, { _id: true, timestamps: true })
 
+todoSchema.index({ userID: 1 })
+
 const TODO = mongoose.model('todo_list', todoSchema)
 
 export default TODO

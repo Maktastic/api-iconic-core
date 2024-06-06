@@ -2,7 +2,7 @@ import Account from "../../schemas/accountSchema.js";
 import _ from 'lodash'
 import {
     generateRefreshToken,
-    generateTemporaryCode,
+    generateTemporaryCode, generateTemporaryToken,
     generateToken,
     generateTwoFactorSecret
 } from "../../utils/tokenGeneration.js";
@@ -284,22 +284,21 @@ const accountController = {
                 }
                 
                 if(userDoc && userDoc.isEmailVerified) {
-                    
-                    const { tempCode, expiry } = generateTemporaryCode()
-                    
-                    userDoc.resetCode = tempCode
-                    userDoc.resetExpiry = expiry
+                    const _id = userDoc._id
+                    const data = await generateTemporaryToken({ _id })
+                    userDoc.tempToken = data.tempToken
+                    userDoc.expiry = data.expiry
                     await userDoc.save()
-                    await sendForgotPassword(userDoc.email, tempCode)
+                    await sendForgotPassword(userDoc.email, userDoc.tempToken)
+
+                    Logbook.info('Email sent successfully')
+                    return res.status(200).send({ message: 'Email is sent successfully', status: 200 })
                     
                 } else {
                     return res.status(400).send({ error: 'Email Account is not verified', status: 400 })
                 }
             })
-            .then(() => {
-                Logbook.info('Email sent successfully')
-                return res.status(200).send({ message: 'Email is sent successfully', status: 200 })
-            }).catch((error) => {
+            .catch((error) => {
                 Logbook.error(error)
                 return res.status(500).send({ error: error, status: 500 })
             })
@@ -310,45 +309,31 @@ const accountController = {
     resetPassword: async (req, res) => {
         let userDoc;
 
-        const { email, resetCode, newPassword } = req.body
+        const { newPassword, token } = req.body
 
-        await Account.findOne({ email: email })
-            .then(async (user) => {
-                
-                if(user && user.length !== 0) {
-                    userDoc = user
+        await Account.findOne({ tempToken: token })
+            .then(async (userDoc) => {
 
-                    if(userDoc && userDoc.resetExpiry < Date.now() ) {
-                        return res.status(400).send({ error: 'Expired Code', status: 400 })
-                    }
-
-                    if(userDoc && parseInt(userDoc.resetCode) !== parseInt(resetCode)) {
-                        return res.status(400).send({ error: 'Invalid Code', status: 400 })
-                    }
-
-                    if(userDoc && !userDoc.isEmailVerified) {
-                        return res.status(400).send({ error: 'Email is not verified', status: 400 })
-                    }
-
-                    else {
-                        userDoc.password = newPassword
-                        userDoc.resetCode = null
-                        userDoc.resetExpiry = null
-                        await userDoc.save().then(() => {
-                            Logbook.info('Password updated successfully')
-                            return res.status(200).send({ message: 'Password has been updated successfully', status: 200 })
-                        }).catch((error) => {
-                            Logbook.error('Password not updated')
-                            return res.status(400).send({ error: error, status: 400 })
-                        })
-                    }
+                if(userDoc && userDoc.resetExpiry < Date.now() ) {
+                    return res.status(400).send({ error: 'Expired Token', status: 400 })
                 }
-                
+                else {
+                    userDoc.password = newPassword
+                    userDoc.tempToken = null
+                    userDoc.resetExpiry = null
+                    await userDoc.save().then(() => {
+                        Logbook.info('Password updated successfully')
+                        return res.status(200).send({ message: 'Password has been updated successfully', status: 200 })
+                    }).catch((error) => {
+                        Logbook.error('Password not updated')
+                        return res.status(400).send({ error: error, status: 400 })
+                    })
+                }
 
             })
             .catch(error => {
                 Logbook.error(error)
-                return res.status(400).send({ error: 'User could not be found', status: 400 })
+                return res.status(400).send({ error: 'Password could not be changed', status: 400 })
             })
     },
     

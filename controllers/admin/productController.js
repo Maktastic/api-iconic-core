@@ -35,16 +35,22 @@ const productController = {
     },
 
     addMiner: async(req, res) => {
-        const { expected_price, EOI } = req.body
+        const { expected_price, EOI, type } = req.body
 
         if(!expected_price || !EOI) {
             Logbook.error('Invalid Request Parameters')
             return res.status(400).send({ error: 'Invalid Request Parameters', status: 400 })
         }
 
+        const checkType = await Product.findOne({ type: type })
+        if(!checkType) {
+            return res.status(404).send({ error: "type field doesnt match: fullMiner | partialMiner | container" })
+        }
+
         let payload = {
             expected_price: expected_price,
-            EOI: EOI
+            EOI: EOI,
+            type: type
         }
 
         await Product.create(payload)

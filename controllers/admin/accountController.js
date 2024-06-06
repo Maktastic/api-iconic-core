@@ -1,5 +1,6 @@
 
 import Account from '../../schemas/accountSchema.js'
+import mongoose from "mongoose";
 const accountController = {
 
     // get all users
@@ -29,6 +30,21 @@ const accountController = {
             })
             .catch((error) => {
                 res.status(500).send({ error: 'Internal Server Error', status: 500})
+            })
+    },
+
+    getSpecificUser: async ( req, res ) => {
+        let { id } = req.params
+        id = new mongoose.Types.ObjectId(id)
+
+        await Account.findOne({ _id: id }, { password: 0 })
+            .then((response) => {
+                if(response) {
+                    return res.status(200).send({ userData: response, status: 200 })
+                }
+            })
+            .catch((error) => {
+                return res.status(400).send({ error: 'User not found', status: 400 })
             })
     }
 

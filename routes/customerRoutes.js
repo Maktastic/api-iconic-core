@@ -12,6 +12,7 @@ import accountController from "../controllers/customer/accountController.js";
 import calculateController from "../controllers/customer/calculateController.js";
 import cartController from "../controllers/customer/cartController.js";
 import uploadController from "../controllers/customer/uploadController.js";
+import todoListController from "../controllers/customer/todoListController.js";
 
 //Validations
 import validateLogin from "../validations/customer/validateLogin.js";
@@ -68,13 +69,17 @@ routes.post('/upload/documents', validateUploads, AuthenticateAPI, upload.array(
 
 
 // ---------------- Cart -----------------------
-routes.post('/cart', AuthenticateAPI, cartController.createCart)
+routes.post('/cart/add', AuthenticateAPI, cartController.createCartItem)
 
 // ---------------- Countries -----------------------
 routes.get('/countries', countriesController.getCountries)
 
 // ---------------- User Details -----------------------
 routes.get('/user/account', AuthenticateAPI, accountController.getUser)
+
+
+// TODO
+routes.get('/todo/all', AuthenticateAPI, todoListController.getAllUserList)
 
 
 export default routes

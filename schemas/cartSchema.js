@@ -1,61 +1,49 @@
 import mongoose from "mongoose";
 import crypto from "crypto";
 
-
-const cart = new mongoose.Schema({
-
+const cartSchema = new mongoose.Schema({
     userID: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Account',
-    },
-
-    quantity: {
-        type: Number,
         required: true
     },
-
-    createdAt: {
-        type: Date,
-        default: Date.now
-    },
-
-    // Buy Miner, Container, Shared Mining
-    purchaseType: {
-        type: String
-    },
-
-    productID: {
+    items: [{
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'BuyMiner',
-    },
-
-    productData: {
-        type: Object
-    },
-
+        ref: 'CartItem',
+        required: true
+    }],
     cartID: {
-        type: Number,
-        default: crypto.randomInt(100000, 999999).toString()
+        type: String,
+        default: () => crypto.randomInt(100000, 999999).toString(),
+        unique: true // Ensuring cartID is unique
     },
-
-    price: {
+    currency: {
+        type: String,
+        default: 'USD'
+    },
+    total_EOI: {
         type: Number,
         default: 0,
         required: true
     },
-
-    currency: {
-        type: String,
-        default: 'USD',
+    grand_total: {
+        type: Number,
+        default: 0,
+        required: true
     },
-
-    minerDescription: {
-        type: String
+    total_quantity: {
+        type: Number,
+        required: true,
+        default: 0
+    },
+    createdAt: {
+        type: Date,
+        default: Date.now,
+        expires: 86400 // 24 hours
     }
+});
 
-}, { "createdAt": 1 }, { expireAfterSeconds: 86400 } )
+cartSchema.index({ cartID: 1 }, { unique: true });
 
-cart.index({ cartID: 1 }, { unique: true })
-
-const Cart = mongoose.model('Cart', cart)
-export default Cart
+const Cart = mongoose.model('Cart', cartSchema);
+export default Cart;

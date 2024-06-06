@@ -15,6 +15,7 @@ import * as path from "node:path";
 import { fileURLToPath } from 'url'
 import createBitcoinSocket from "./config/socket.js";
 import compression from "compression";
+import cookieParser from 'cookie-parser'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -35,6 +36,7 @@ async function serverInit() {
     app.use(express.urlencoded({ extended: true }));
     app.use(cors()); // Use the CORS middleware
     app.use(redisSession);
+    app.use(cookieParser())
 
     // Passport middleware
     passportConfig()

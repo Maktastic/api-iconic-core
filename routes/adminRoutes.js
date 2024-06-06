@@ -14,6 +14,7 @@ import insertListValidation from "../validations/admin/todoList/insertList.js";
 import deleteListValidation from "../validations/admin/todoList/deleteList.js";
 import updateListValidation from "../validations/admin/todoList/updateList.js";
 import validateGetAdminLists from "../validations/admin/todoList/validateGetAdminLists.js";
+import routes from "./customerRoutes.js";
 
 const adminRoutes = express.Router()
 
@@ -40,7 +41,7 @@ adminRoutes.post('/product/update', AuthenticateAPI, checkIsAdmin, validateUpdat
 
 
 // ---------------- TODO LIST -----------------------
-adminRoutes.get('/todo/all', AuthenticateAPI, todoListController.getAllList)
+adminRoutes.get('/todo/all', AuthenticateAPI, checkIsAdmin, todoListController.getAllList)
 adminRoutes.post('/todo/add', AuthenticateAPI, checkIsAdmin, insertListValidation, todoListController.addToList)
 adminRoutes.post('/todo/delete', AuthenticateAPI, checkIsAdmin, deleteListValidation, todoListController.deleteList)
 adminRoutes.post('/todo/update', AuthenticateAPI, checkIsAdmin, updateListValidation, todoListController.updateList)
@@ -48,8 +49,10 @@ adminRoutes.get('/todo/:id', AuthenticateAPI, checkIsAdmin, validateGetAdminList
 
 
 // User Details
-adminRoutes.get('/user/all', AuthenticateAPI, checkIsAdmin, accountController.getAllUsers)
-adminRoutes.post('/user/update', AuthenticateAPI, checkIsAdmin)
+adminRoutes.get('/user/all', AuthenticateAPI, checkIsAdmin, accountController.getAllUsers) // get all users
+adminRoutes.get('/user/:id', AuthenticateAPI, checkIsAdmin, accountController.getSpecificUser) // get specific user
+// adminRoutes.post('/user/update', AuthenticateAPI, checkIsAdmin, accountController, accountController.updateUser)
+
 
 
 export default adminRoutes
