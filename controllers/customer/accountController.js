@@ -4,14 +4,21 @@ import {
     generateRefreshToken,
     generateTemporaryCode, generateTemporaryToken,
     generateToken,
-    generateTwoFactorSecret
+    generateTwoFactorSecret, verifyToken
 } from "../../utils/tokenGeneration.js";
 import Logbook from "../../config/logger.js";
-import {sendChangeEmail, sendChangePassword, sendForgotPassword} from "../../config/mailer.js";
+import {
+    sendChangeEmail,
+    sendChangePassword, sendChangePhoneNumber,
+    sendEmailVerification,
+    sendForgotPassword,
+    sendVerificationEmail, sendVerificationSMS
+} from "../../config/mailer.js";
 import qrcode from "qrcode";
 import speakeasy from "speakeasy";
 import parsePhoneNumber from 'libphonenumber-js'
 import mongoose from "mongoose";
+import GlobalContracts from "../../schemas/globalContractsSchema.js";
 
 const accountController = {
     
@@ -68,6 +75,11 @@ const accountController = {
                     let payload = { _id: result?._id.toString() }
                     const accessToken = await generateToken(payload)
                     const refreshToken = await generateRefreshToken(payload)
+
+                    result.refreshToken = refreshToken
+                    await result.save().catch((error) => {
+                        return res.status(400).send({ error: 'Internal Server Error', status: 400 })
+                    })
 
                     res.cookie('refreshToken', refreshToken, {
                         httpOnly: process.env.NODE_ENV === 'production',
@@ -127,6 +139,12 @@ const accountController = {
                                     else {
                                         const accessToken = await generateToken(payload)
                                         const refreshToken = await generateRefreshToken(payload)
+
+                                        userDoc.refreshToken = refreshToken
+                                        await userDoc.save().catch((error) => {
+                                            return res.status(400).send({ error: 'Internal Server Error', status: 400 })
+                                        })
+
                                         res.cookie('refreshToken', refreshToken, {
                                             httpOnly: process.env.NODE_ENV === 'production',
                                             secure: process.env.NODE_ENV === 'production', // Set to true in production
@@ -222,51 +240,72 @@ const accountController = {
         }
     },
 
-    validateEmail: async (req, res) => {
+    validateEmail: async ( req, res )  => {
+
+        const userID = new mongoose.Types.ObjectId(req.user._id)
+        let user = null
+
+        try {
+            user = await Account.findOne({ _id: userID })
+        }
+        catch (e) {
+            Logbook.error({ error: 'User does not exist', status: 400 })
+            return res.status(400).send({ error: 'User does not exist', status: 400 })
+        }
+
+        if(user.isEmailVerified) {
+            return res.status(400).send({ error: 'Email is already verified', status: 400 })
+        }
+
+        if(!user.isEmailVerified) {
+
+            const data = generateTemporaryCode({userID})
+            user.resetCode = data.tempCode
+            user.resetExpiry = data.expiry
+            try {
+                await user.save()
+                await sendEmailVerification(user.email, data.tempCode)
+                return res.status(200).send({ message: 'Email validation sent successfully', status: 200 })
+            }
+            catch (e) {
+                return res.status(500).send({ error: 'Internal Server Error', status: 500 })
+            }
+
+        }
+
+    },
+
+    validateEmailCode: async (req, res) => {
+        const { code } = req.body
         
-        const { tempToken } = req.user
-        const user_id = req.user._id.toString()
-        
-        if(!tempToken) {
+        if(!code) {
+            return res.status(400).send({ error: 'Code invalid', status: 400 })
+        }
+
+        const user = await Account.findOne({ resetCode: code })
+
+        if(code && code !== user.resetCode ) {
+            return res.status(400).send({ error: 'Invalid Code', status: 400 })
+        }
+
+        if(!user) {
             return res.status(400).send({ error: 'User not found', status: 400 })
         }
-        
-        await Account.findOne({ tempToken: tempToken })
-            .then(async (result) => {
-                if(result && _.size(result) !== 0) {
-                    result.tempToken = null
-                    result.isEmailVerified = true
-                    await result.save()
-                } else {
-                    res.status(400).send({ error: 'User not found', status: 400 })
-                }
-            })
-            .then(async () => {
-                let payload = { _id: user_id }
-                const accessToken = await generateToken(payload)
-                const refreshToken = await generateRefreshToken(payload)
 
-                res.cookie('accessToken', accessToken, {
-                    httpOnly: true,
-                    secure: process.env.NODE_ENV === 'production', // Set to true in production
-                    maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days expiration
-                });
+        if(user.isEmailVerified) {
+            return res.status(400).send({ error: 'Email is already verified', status: 400 })
+        }
 
-                res.cookie('refreshToken', refreshToken, {
-                    httpOnly: true,
-                    secure: process.env.NODE_ENV === 'production', // Set to true in production
-                    maxAge: 24 * 60 * 60 * 1000 // 7 days expiration
-                });
-                Logbook.info(`200: Account ${user_id} verification success`)
-                res.status(200).send({ 
-                    message: `Account: ${user_id} verification successful`, 
-                    redirectionURL: `${process.env.BASE_PATH}/dashboard?login=success&status=200&token=${accessToken}`,
-                    status: 200
-                })
+        user.resetCode = null
+        user.resetExpiry = null
+        user.isEmailVerified = true
+
+        await user.save()
+            .then((response) => {
+                return res.status(200).send({ message: 'Email has been verified successfully', status: 200 })
             })
             .catch((error) => {
-                Logbook.error(error)
-                res.status(400).send({ error: error, status: 400 })
+                return res.status(400).send({ error: 'Email verification unsuccessful', status: 400 })
             })
         
     },
@@ -454,7 +493,7 @@ const accountController = {
     },
 
     twoFactorAuth: async (req, res) => {
-        if(req.isAuthenticated) {
+        if(req.isAuthenticated()) {
             // check if user is authenticated
             // check if user exists
             const user = req.user
@@ -462,30 +501,33 @@ const accountController = {
                 Logbook.error(`${user._id}: Two Factor is already setup [ 400 ]`)
                 return res.status(400).send({ error: 'Two Factor is already setup', status: 400 })
             }
-            
-            await Account.findOne({ _id: user._id })
-                .then(async (userDoc) => {
 
-                    const secret = await generateTwoFactorSecret()
-                    userDoc.twoFactorAuthSecret = secret.base32
-                    await userDoc.save().then(() => {
-                        qrcode.toDataURL(secret.otpauth_url, (err, data_url) => {
-                            if (err) {
-                                Logbook.error(error)
-                                return res.status(400).send({ error: 'Error generating QR code', status: 400 });
-                            }
-                            Logbook.info('QR Code generated successfully')
-                            return res.status(200).json({ qrCodeUrl: data_url, secret: secret.base32, status: 200 });
-                        });
-                    }).catch((error) => {
-                        Logbook.error(error)
-                        return res.status(400).send({ error: error, status: 400 })
-                    })
-                    
+            const userDoc = await Account.findOne({ _id: new mongoose.Types.ObjectId(user._id) })
+
+            if(!userDoc) {
+                Logbook.error({ error: 'User not found', status: 400 })
+                return res.status(400).send({ error: 'User not found', status: 400 })
+            }
+
+            const secret = await generateTwoFactorSecret()
+            const qrCodeData = await qrcode.toDataURL(secret.otpauth_url).catch((error) => {
+                Logbook.error(error)
+                return res.status(400).send({ error: 'Error generating QR Code', status: 400 })
+            })
+
+            if(qrCodeData) {
+                userDoc.twoFactorImage = qrCodeData
+                userDoc.twoFactorAuthSecret = secret.base32
+                await userDoc.save().then(() => {
+                    return res.status(200).send({ secureImage: qrCodeData })
                 }).catch((error) => {
-                    Logbook.error(`${user._id}: User not found [ 400 ]`)
-                    return res.status(400).send({ error: error, status: 400 })
+                    Logbook.error(error)
+                    return res.status(500).send({ error: 'Internal Server Error', status: 500 })
                 })
+
+            } else {
+                return res.status(400).send({ error: 'Error generating QR Code', status: 400 })
+            }
 
         } else {
             return res.status(401).send({ error: 'Unauthorized', status: 400 })
@@ -493,7 +535,7 @@ const accountController = {
     },
 
     verifyTwoFactorAuth: async (req, res) => {
-        if(req.isAuthenticated) {
+        if(req.isAuthenticated()) {
             
             const user = req.user
             
@@ -534,9 +576,260 @@ const accountController = {
         } else {
             return res.status(401).send({ error: 'Unauthorized', status: 400 })
         }
+    },
+
+    validateRefreshToken: async (req, res) => {
+
+        const { refreshToken } = req.cookies
+
+        const user = await Account.findOne({ refreshToken: refreshToken }, { password: 0 })
+
+        if(!user) {
+            return res.status(400).send({ error: 'Invalid Token', status: 400 })
+        }
+
+        const checkTokenExpiry = await verifyToken(refreshToken)
+
+        if(checkTokenExpiry.expired) {
+            return res.status(400).send({ error: 'Token is expired, please login again.', expiry: true, status: 400 })
+        }
+
+        if(checkTokenExpiry.valid) {
+            let payload = { _id: new mongoose.Types.ObjectId(user._id) }
+            const accessToken = await generateToken(payload)
+
+            res.cookie('accessToken', accessToken, {
+                httpOnly: process.env.NODE_ENV === 'production',
+                secure: process.env.NODE_ENV === 'production', // Set to true in production
+                sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+                maxAge: 24 * 60 * 60 * 1000 // 7 days expiration
+            });
+
+            return res.status(200).send({ accessToken: accessToken, userData: user, status: 200 })
+        } else {
+            return res.status(500).send({ error: 'Internal Server Error', status: 500 })
+        }
+
+    },
+
+    validatePhoneNumber: async (req, res) => {
+
+        const userID = new mongoose.Types.ObjectId(req.user._id)
+
+        const user = await Account.findOne({ _id: userID })
+
+        if(!user) {
+            return res.status(404).send({ error: 'User not found', status: 404 })
+        }
+
+        let phoneNumber = (user?.mobile_number).toString()
+
+        if(!phoneNumber) {
+            return res.status(404).send({ error: 'Phone Number is not available.', status: 404 })
+        }
+
+        // Validate UAE phone number format
+        if(phoneNumber && !phoneNumber.includes('+')) {
+            phoneNumber = '+' + phoneNumber
+        }
+
+        let parsedNumber = parsePhoneNumber(phoneNumber)
+        if(!parsedNumber) {
+            return res.status(400).send({ error: 'Invalid Phone Number', status: 400 })
+        }
+
+        let isValidNumber = parsedNumber.isValid()
+        if(!isValidNumber) {
+            return res.status(400).send({ error: 'Invalid Phone Number', status: 400 })
+        }
+
+
+        const generateSMS = generateTemporaryCode()
+        const sendMessage = await sendVerificationSMS(phoneNumber, generateSMS.tempCode)
+
+        if(!sendMessage.message_sent) {
+            return res.status(400).send({ error: 'SMS send failed, please try again later', status: 400 })
+        }
+
+        try {
+            user.phoneCode = generateSMS.tempCode
+            user.phoneCodeExpiry = generateSMS.expiry
+            await user.save()
+            return res.status(200).send({ message: 'Message sent successfully', status: 200 })
+        }
+        catch (e) {
+            return res.status(500).send({ error: 'Internal Server Error', status: 500 })
+        }
+
+    },
+
+    verifyPhoneNumber: async (req, res) => {
+
+        let { token, phoneNumber } = req.body
+
+        if(!token) {
+            return res.status(400).send({ error: '6 digit code is required', status: 400 })
+        }
+
+        // Validate UAE phone number format
+        if(!phoneNumber.includes('+')) {
+            phoneNumber = '+' + phoneNumber
+        }
+
+        let parsedNumber = parsePhoneNumber(phoneNumber)
+        if(!parsedNumber) {
+            return res.status(400).send({ error: 'Invalid Phone Number', status: 400 })
+        }
+
+        let isValidNumber = parsedNumber.isValid()
+        if(!isValidNumber) {
+            return res.status(400).send({ error: 'Invalid Phone Number', status: 400 })
+        }
+
+        const user = await Account.findOne({ phoneCode: token })
+
+        if(!user) {
+            return res.status(404).send({ error: 'Invalid Code', status: 400 })
+        }
+
+        if (Date.now() > user.phoneCodeExpiry) {
+            return res.status(400).send({ error: 'Token is expired', status: 400 })
+        }
+
+        if(user.isMobileVerified) {
+           return res.status(404).send({ error: 'Phone number already verified', status: 404 })
+        }
+
+        user.isMobileVerified = true
+        user.phoneCodeExpiry = null
+        user.phoneCode = null
+        user.mobile_number = phoneNumber
+
+        await user.save()
+            .then((response) => {
+                if(response) { return res.status(200).send({ message: 'Phone number verified successfully', status: 200 })}
+            })
+            .catch((error) => {
+                Logbook.error(error)
+                return res.status(400).send({ error: 'Phone Number verification failed', status: 400 })
+            })
+    },
+
+    getGlobalContracts: async (req, res) => {
+
+        try {
+            const globalContracts = await GlobalContracts.find({});
+            res.status(200).send({ message: 'Global Messages Retrieved Successfully', status: 200, data: globalContracts });
+        } catch (error) {
+            Logbook.error('Error retrieving messages:', error);
+            res.status(500).send({ error: 'Internal Server Error', status: 500 });
+        }
+
+    },
+
+    changePhoneNumber: async ( req, res ) => {
+        let { newPhoneNumber } = req.body // get new email
+        const user = req.user
+
+        // Validate UAE phone number format
+        if(!newPhoneNumber.includes('+')) {
+            newPhoneNumber = '+' + newPhoneNumber
+        }
+
+        let parsedNumber = parsePhoneNumber(newPhoneNumber)
+        if(!parsedNumber) {
+            return res.status(400).send({ error: 'Invalid Phone Number', status: 400 })
+        }
+
+        let isValidNumber = parsedNumber.isValid()
+        if(!isValidNumber) {
+            return res.status(400).send({ error: 'Invalid Phone Number', status: 400 })
+        }
+
+        const checkExistingNumber = await Account.findOne({ mobile_number: newPhoneNumber })
+
+        if(checkExistingNumber) {
+            return res.status(400).send({ error: 'PhoneNumber already in use.', status: 400 })
+        }
+
+        if(user && !user.isEmailVerified) {
+            return res.status(400).send({ error: 'Account email address is not verified', status: 400 })
+        }
+
+        if(user && !user.isMobileVerified) {
+            return res.status(400).send({ error: 'Current Phone Number is not verified', status: 400 })
+        }
+
+        await Account.findOne({ _id: user._id })
+            .then(async (userDoc) => {
+
+                const { tempCode, expiry } = generateTemporaryCode()
+                userDoc.resetCode = tempCode
+                userDoc.resetExpiry = expiry
+                await userDoc.save()
+                await sendChangePhoneNumber(userDoc.email, tempCode)
+                    .then(() => {
+                        Logbook.info('Email code sent successfully.')
+                        return res.status(200).send({ message: 'Email code sent successfully', status: 200 })
+                    }).catch((error) => {
+                        Logbook.error(error)
+                        return res.status(400).send({ error: error, status: 400 })
+                    })
+
+            }).catch((error) => {
+                Logbook.error(`${user._id}: User not found`)
+                return res.status(400).send({ error: error, status: 400 })
+            })
+
+
+    },
+
+    resetPhoneNumber: async ( req, res ) => {
+        let { token, newPhoneNumber } = req.body
+
+        if(!token) {
+            return res.status(400).send({ error: '6 digit code is required', status: 400 })
+        }
+
+        // Validate UAE phone number format
+        if(!newPhoneNumber.includes('+')) {
+            newPhoneNumber = '+' + newPhoneNumber
+        }
+
+        let parsedNumber = parsePhoneNumber(newPhoneNumber)
+        if(!parsedNumber) {
+            return res.status(400).send({ error: 'Invalid Phone Number', status: 400 })
+        }
+
+        let isValidNumber = parsedNumber.isValid()
+        if(!isValidNumber) {
+            return res.status(400).send({ error: 'Invalid Phone Number', status: 400 })
+        }
+
+        const user = await Account.findOne({ resetCode: token })
+
+        if(!user) {
+            return res.status(404).send({ error: 'Invalid Code', status: 400 })
+        }
+
+        if (Date.now() > user.resetExpiry) {
+            return res.status(400).send({ error: 'Token is expired', status: 400 })
+        }
+
+        user.resetCode = null
+        user.resetExpiry = null
+        user.mobile_number = newPhoneNumber
+
+        await user.save()
+            .then((response) => {
+                if(response) { return res.status(200).send({ message: 'Phone number changed successfully', status: 200 })}
+            })
+            .catch((error) => {
+                Logbook.error(error)
+                return res.status(400).send({ error: 'Phone Number verification failed', status: 400 })
+            })
     }
 
-    
 }
 
 export default accountController

@@ -13,8 +13,8 @@ const cartSchema = new mongoose.Schema({
         required: true
     }],
     cartID: {
-        type: String,
-        default: () => crypto.randomInt(100000, 999999).toString(),
+        type: Number,
+        default: () => crypto.randomInt(100000, 999999),
         unique: true // Ensuring cartID is unique
     },
     currency: {

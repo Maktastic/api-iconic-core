@@ -30,3 +30,15 @@ export function generateTemporaryCode() {
 export function generateTwoFactorSecret() {
     return speakeasy.generateSecret({ otpauth_url: true, length: 20, name: 'Iconic Core' } );
 }
+
+export function verifyToken(token) {
+    try {
+        const decoded = jwt.verify(token, process.env.ACCOUNT_REFRESH_TOKEN);
+        return { valid: true, expired: false };
+    } catch (err) {
+        return {
+            valid: false,
+            expired: true,
+        };
+    }
+}

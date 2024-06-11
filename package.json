@@ -5,7 +5,7 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "start": "nodemon server.js"
+    "start": "node server.js"
   },
   "dependencies": {
     "aws-sdk": "^2.1630.0",
@@ -37,6 +37,8 @@
     "redis": "^4.6.14",
     "socket.io": "^4.7.5",
     "speakeasy": "^2.0.0",
+    "stripe": "^15.10.0",
+    "twilio": "^5.1.1",
     "winston": "^3.13.0"
   }
 }

@@ -7,7 +7,7 @@ const cartItemsSchema = new mongoose.Schema({
         required: true
     },
     cartID: {
-        type: Number,
+        type: Number, // Changed to Number to match the Cart schema
         required: true
     },
     quantity: {

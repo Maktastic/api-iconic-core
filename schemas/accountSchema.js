@@ -48,7 +48,14 @@ const account = new mongoose.Schema({
     twoFactorAuthSecret: {
       type: String  
     },
+    twoFactorImage: {
+      type: String,
+    },
     isEmailVerified: {
+        type: Boolean,
+        default: false
+    },
+    isMobileVerified: {
         type: Boolean,
         default: false
     },
@@ -76,8 +83,22 @@ const account = new mongoose.Schema({
         type: Number,
         default: 0
     },
+    payment_due: {
+      type: Number,
+      default: 0
+    },
+    generated_btc_income: {
+      type: Number,
+      default: 0
+    },
     tempToken: {
         type: String
+    },
+    phoneCode: {
+        type: Number
+    },
+    phoneCodeExpiry: {
+        type: Number
     },
     resetCode: {
         type: Number
@@ -85,26 +106,29 @@ const account = new mongoose.Schema({
     resetExpiry: {
         type: Number
     },
+    refreshToken: {
+      type: String
+    },
     documents: {
         passport: {
             fileName: { type: String, default: null },
             pathUrl: { type: String, default: null },
-            status: { type: String, default: 'pending' }
+            status: { type: String, enum: ['pending', 'approved', 'denied'], default: 'pending' }
         },
         id: {
             fileName: { type: String, default: null },
             pathUrl: { type: String, default: null },
-            status: { type: String, default: 'pending' }
+            status: { type: String, enum: ['pending', 'approved', 'denied'], default: 'pending' }
         },
         kyc: {
             fileName: { type: String, default: null },
             pathUrl: { type: String, default: null },
-            status: { type: String, default: 'pending' }
+            status: { type: String, enum: ['pending', 'approved', 'denied'], default: 'pending' }
         },
         utility_bills: {
             fileName: { type: String, default: null },
             pathUrl: { type: String, default: null },
-            status: { type: String, default: 'pending' }
+            status: { type: String, enum: ['pending', 'approved', 'denied'], default: 'pending' }
         }
     }
 

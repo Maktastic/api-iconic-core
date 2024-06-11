@@ -16,6 +16,7 @@ import { fileURLToPath } from 'url'
 import createBitcoinSocket from "./config/socket.js";
 import compression from "compression";
 import cookieParser from 'cookie-parser'
+import paymentRoutes from "./routes/paymentRoutes.js";
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -46,12 +47,15 @@ async function serverInit() {
     try {
         app.use(`/api/${basePath}`, routes)
         app.use('/api/admin', adminRoutes)
+        app.use('/payment', paymentRoutes)
     } catch(e) {
         Logbook.error('Base Path is missing')
         throw new Error('Base Path is missing')
     }
 
-    // invokePhoneCode('+971556367628')
+    app.use('/health', (req, res) => {
+        res.status(200).send({ message: 'Health check successful', status: 200 })
+    })
 
     app.use((err, req, res, next) => {
         Logbook.error(err.stack); // Log the error stack for debugging

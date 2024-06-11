@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import Account from '../schemas/accountSchema.js'
 import Logbook from "./logger.js";
 import './passport-google.js'
+import jwt from "jsonwebtoken";
 
 dotenv.config();
 
@@ -28,7 +29,6 @@ passport.use(
         }
     })
 );
-
 
 passport.serializeUser((user, done) => {
     process.nextTick(() => {
